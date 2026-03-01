@@ -9,6 +9,7 @@ public struct CapturedFrame: Sendable {
     public let windowTitle: String?
     public let bundleIdentifier: String?
     public let displayID: CGDirectDisplayID
+    public let isManualCapture: Bool
 
     public init(
         image: CGImage,
@@ -16,7 +17,8 @@ public struct CapturedFrame: Sendable {
         appName: String,
         windowTitle: String? = nil,
         bundleIdentifier: String? = nil,
-        displayID: CGDirectDisplayID = CGMainDisplayID()
+        displayID: CGDirectDisplayID = CGMainDisplayID(),
+        isManualCapture: Bool
     ) {
         self.image = image
         self.timestamp = timestamp
@@ -24,5 +26,6 @@ public struct CapturedFrame: Sendable {
         self.windowTitle = windowTitle
         self.bundleIdentifier = bundleIdentifier
         self.displayID = displayID
+        self.isManualCapture = isManualCapture
     }
 }

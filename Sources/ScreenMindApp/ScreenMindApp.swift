@@ -131,6 +131,8 @@ struct ScreenMindApp: App {
                             } else {
                                 NSApp.sendAction(Selector(("openWindow:")), to: nil, from: "timeline")
                             }
+                        case .manualCapture:
+                            state.manualCapture()
                         }
                     }
                 }

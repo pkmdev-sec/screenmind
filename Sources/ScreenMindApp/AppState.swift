@@ -137,4 +137,20 @@ public final class AppState {
             await pipeline?.setPaused(isPaused)
         }
     }
+
+    /// Trigger a manual capture — takes a screenshot immediately and processes it through the pipeline.
+    public func manualCapture() {
+        guard isMonitoring else {
+            configurationError = "Start monitoring first to use manual capture"
+            return
+        }
+
+        pipelineStatus = "Manual capture..."
+        Task {
+            await pipeline?.captureNow()
+            await MainActor.run {
+                self.pipelineStatus = "Capturing"
+            }
+        }
+    }
 }

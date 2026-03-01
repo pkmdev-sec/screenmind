@@ -17,6 +17,7 @@ public final class KeyboardShortcutsManager: @unchecked Sendable {
         case togglePause
         case openNotesBrowser
         case openTimeline
+        case manualCapture
     }
 
     private var eventHandler: EventHandlerRef?
@@ -47,6 +48,11 @@ public final class KeyboardShortcutsManager: @unchecked Sendable {
         let hotKeyID4 = EventHotKeyID(signature: fourCharCode("SMn4"), id: 4)
         RegisterEventHotKey(UInt32(kVK_ANSI_T), modifiers, hotKeyID4, GetEventDispatcherTarget(), 0, &hotKeyRef)
 
+        // ⌘⌥⇧C — Manual capture (keycode 8 = C, with Option key to avoid conflicts)
+        let captureModifiers: UInt32 = UInt32(cmdKey | shiftKey | optionKey)
+        let hotKeyID5 = EventHotKeyID(signature: fourCharCode("SMn5"), id: 5)
+        RegisterEventHotKey(UInt32(kVK_ANSI_C), captureModifiers, hotKeyID5, GetEventDispatcherTarget(), 0, &hotKeyRef)
+
         // Install event handler
         var eventType = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
 
@@ -63,6 +69,7 @@ public final class KeyboardShortcutsManager: @unchecked Sendable {
             case 2: manager.actionCallback?(.togglePause)
             case 3: manager.actionCallback?(.openNotesBrowser)
             case 4: manager.actionCallback?(.openTimeline)
+            case 5: manager.actionCallback?(.manualCapture)
             default: break
             }
 

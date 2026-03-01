@@ -122,6 +122,17 @@ public actor PipelineCoordinator {
         SMLogger.pipeline.info("Pipeline stopped")
     }
 
+    /// Trigger a manual capture — bypasses cooldown and change detection.
+    public func captureNow() async {
+        guard isRunning else { return }
+        guard let frame = await captureActor.captureNow() else {
+            SMLogger.pipeline.warning("Manual capture: no frame returned")
+            return
+        }
+        SMLogger.pipeline.info("Manual capture — processing frame from \(frame.appName, privacy: .public)")
+        await processFrame(frame)
+    }
+
     /// Pause/resume the pipeline.
     public func setPaused(_ paused: Bool) {
         isRunning = !paused
@@ -168,10 +179,17 @@ public actor PipelineCoordinator {
             return
         }
 
-        // Stage 1: Change Detection
-        guard let significantFrame = await changeDetector.process(frame) else {
-            await resourceMonitor.recordFrameFiltered()
-            return // Filtered — no significant change
+        // Stage 1: Change Detection (manual captures bypass this)
+        let significantFrame: SignificantFrame
+        if frame.isManualCapture {
+            // Manual captures always pass — user explicitly requested it
+            significantFrame = SignificantFrame(frame: frame, hash: 0, differenceScore: 1.0)
+        } else {
+            guard let detected = await changeDetector.process(frame) else {
+                await resourceMonitor.recordFrameFiltered()
+                return // Filtered — no significant change
+            }
+            significantFrame = detected
         }
 
         // Stage 1b: Idle awareness.
@@ -182,8 +200,8 @@ public actor PipelineCoordinator {
 
         SMLogger.pipeline.info("Frame passed detection — app=\(frame.appName, privacy: .public)")
 
-        // Stage 2: Cooldown — don't generate notes too frequently
-        if let lastNote = lastNoteTimestamp {
+        // Stage 2: Cooldown — don't generate notes too frequently (manual captures bypass cooldown)
+        if !frame.isManualCapture, let lastNote = lastNoteTimestamp {
             let elapsed = Date.now.timeIntervalSince(lastNote)
             if elapsed < AppConstants.Pipeline.minNoteCooldownSeconds {
                 SMLogger.pipeline.debug("Cooldown active — \(Int(AppConstants.Pipeline.minNoteCooldownSeconds - elapsed))s remaining")
@@ -347,8 +365,9 @@ public actor PipelineCoordinator {
                 category: generatedNote.category.rawValue
             )
 
-            // Record stats
-            await resourceMonitor.recordNoteGenerated(aiTimeMs: 0) // AI time tracked inside AIProcessingActor
+            // Record stats + learn tag patterns
+            await resourceMonitor.recordNoteGenerated(aiTimeMs: 0)
+            TagSuggester.recordTags(generatedNote.tags)
 
             // Enforce screenshot storage quota periodically (every 10 notes)
             let throughputStats = await resourceMonitor.currentThroughput()

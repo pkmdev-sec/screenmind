@@ -168,6 +168,28 @@ struct MenuBarContentView: View {
 
                 if appState.isMonitoring {
                     Button {
+                        appState.manualCapture()
+                    } label: {
+                        HStack {
+                            Label("Capture Now", systemImage: "camera.shutter.button")
+                                .font(.system(size: 12))
+                            Spacer()
+                            Text("⌘⌥⇧C")
+                                .font(.system(size: 10, design: .monospaced))
+                                .foregroundStyle(.tertiary)
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 6)
+                        .contentShape(Rectangle())
+                        .background(
+                            RoundedRectangle(cornerRadius: 6)
+                                .fill(.quaternary.opacity(hoveredButton == "capture" ? 0.8 : 0))
+                        )
+                        .onHover { hoveredButton = $0 ? "capture" : nil }
+                    }
+                    .buttonStyle(.plain)
+
+                    Button {
                         appState.togglePause()
                     } label: {
                         HStack {

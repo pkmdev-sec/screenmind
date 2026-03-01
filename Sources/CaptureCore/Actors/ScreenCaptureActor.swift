@@ -14,6 +14,7 @@ public actor ScreenCaptureActor {
     private let configuration: CaptureConfiguration
     private var sleepObserver: NSObjectProtocol?
     private var wakeObserver: NSObjectProtocol?
+    private var activeDisplayID: CGDirectDisplayID?
 
     public init(configuration: CaptureConfiguration = CaptureConfiguration()) {
         self.configuration = configuration
@@ -29,7 +30,7 @@ public actor ScreenCaptureActor {
         }
     }
 
-    /// Start capturing the screen.
+    /// Start capturing the screen. Supports multi-display by capturing the display with the active window.
     public func start() async throws {
         guard !isCapturing else { return }
 
@@ -43,10 +44,16 @@ public actor ScreenCaptureActor {
             SMLogger.capture.error("SCShareableContent failed: \(msg, privacy: .public)")
             throw error
         }
-        guard let display = content.displays.first else {
+
+        // Multi-display: find the display containing the frontmost window.
+        // Falls back to main display if detection fails.
+        let display = Self.displayWithActiveWindow(from: content.displays) ?? content.displays.first
+        guard let display else {
             SMLogger.capture.error("No displays found")
             return
         }
+        self.activeDisplayID = display.displayID
+        SMLogger.capture.info("Capturing display \(display.displayID, privacy: .public) (\(display.width)x\(display.height))")
 
         let filter = SCContentFilter(display: display, excludingWindows: [])
 
@@ -65,7 +72,7 @@ public actor ScreenCaptureActor {
             guard let self else { return }
             Task { await self.handleFrame(image) }
         }
-        self.frameHandler = handler // Retain handler — SCStream holds a weak reference
+        self.frameHandler = handler
 
         let stream = SCStream(filter: filter, configuration: streamConfig, delegate: nil)
         try stream.addStreamOutput(handler, type: .screen, sampleHandlerQueue: .global(qos: .utility))
@@ -75,6 +82,46 @@ public actor ScreenCaptureActor {
         self.isCapturing = true
         setupSleepWakeObservers()
         SMLogger.capture.info("Screen capture started (\(streamConfig.width)x\(streamConfig.height))")
+    }
+
+    /// Capture a single frame on demand (for manual capture shortcut).
+    public func captureNow() async -> CapturedFrame? {
+        guard isCapturing else { return nil }
+
+        let app = NSWorkspace.shared.frontmostApplication
+        let pid = app?.processIdentifier
+        let windowInfo = pid.flatMap { Self.frontmostWindowInfo(for: $0) }
+
+        // Take a screenshot — try active display first, fall back to main
+        let displayID = activeDisplayID ?? CGMainDisplayID()
+        var screenshot = CGDisplayCreateImage(displayID)
+        if screenshot == nil && displayID != CGMainDisplayID() {
+            SMLogger.capture.warning("Manual capture: active display failed, falling back to main display")
+            screenshot = CGDisplayCreateImage(CGMainDisplayID())
+        }
+        guard let screenshot else {
+            SMLogger.capture.error("Manual capture: failed to grab display image from any display")
+            return nil
+        }
+
+        let finalImage: CGImage
+        if let bounds = windowInfo?.bounds,
+           let cropped = Self.cropToWindow(image: screenshot, windowBounds: bounds, displayID: displayID) {
+            finalImage = cropped
+        } else {
+            finalImage = screenshot
+        }
+
+        SMLogger.capture.info("Manual capture taken — app=\(app?.localizedName ?? "Unknown", privacy: .public)")
+
+        return CapturedFrame(
+            image: finalImage,
+            appName: app?.localizedName ?? "Unknown",
+            windowTitle: windowInfo?.title,
+            bundleIdentifier: app?.bundleIdentifier,
+            displayID: displayID,
+            isManualCapture: true
+        )
     }
 
     /// Stop capturing.
@@ -99,8 +146,9 @@ public actor ScreenCaptureActor {
         // Get frontmost window info and crop to just that window
         let windowInfo = pid.flatMap { Self.frontmostWindowInfo(for: $0) }
         let finalImage: CGImage
+        let displayID = activeDisplayID ?? CGMainDisplayID()
         if let bounds = windowInfo?.bounds,
-           let cropped = Self.cropToWindow(image: image, windowBounds: bounds) {
+           let cropped = Self.cropToWindow(image: image, windowBounds: bounds, displayID: displayID) {
             finalImage = cropped
         } else {
             finalImage = image
@@ -110,9 +158,34 @@ public actor ScreenCaptureActor {
             image: finalImage,
             appName: app?.localizedName ?? "Unknown",
             windowTitle: windowInfo?.title,
-            bundleIdentifier: app?.bundleIdentifier
+            bundleIdentifier: app?.bundleIdentifier,
+            displayID: displayID,
+            isManualCapture: false
         )
         continuation?.yield(frame)
+    }
+
+    /// Find the display that contains the frontmost window.
+    private static func displayWithActiveWindow(from displays: [SCDisplay]) -> SCDisplay? {
+        guard displays.count > 1 else { return displays.first }
+
+        guard let app = NSWorkspace.shared.frontmostApplication else { return nil }
+        guard let windowInfo = frontmostWindowInfo(for: app.processIdentifier) else { return nil }
+
+        let windowCenter = CGPoint(
+            x: windowInfo.bounds.midX,
+            y: windowInfo.bounds.midY
+        )
+
+        // Find which display contains the window center
+        for display in displays {
+            let displayBounds = CGDisplayBounds(display.displayID)
+            if displayBounds.contains(windowCenter) {
+                return display
+            }
+        }
+
+        return nil
     }
 
     // MARK: - Window Detection & Cropping
@@ -149,9 +222,9 @@ public actor ScreenCaptureActor {
     }
 
     /// Crop the full-display image to just the frontmost window area.
-    private static func cropToWindow(image: CGImage, windowBounds: CGRect) -> CGImage? {
+    private static func cropToWindow(image: CGImage, windowBounds: CGRect, displayID: CGDirectDisplayID = CGMainDisplayID()) -> CGImage? {
         // CGDisplayBounds gives display dimensions in the same coordinate space as CGWindowList
-        let displayBounds = CGDisplayBounds(CGMainDisplayID())
+        let displayBounds = CGDisplayBounds(displayID)
         guard displayBounds.width > 0, displayBounds.height > 0 else { return nil }
 
         // Scale from display coordinates to captured image pixels
