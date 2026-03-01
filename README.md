@@ -153,7 +153,7 @@ All settings are accessible from the menu bar → Settings:
 |---------|---------|-------------|
 | Capture Interval | 15s | How often to capture the screen |
 | Note Cooldown | 60s | Minimum time between notes |
-| Obsidian Vault | `~/Desktop/pkmdev-notes` | Where Markdown notes are exported |
+| Obsidian Vault | `~/add-your-obsidian-vault` | Where Markdown notes are exported |
 | Excluded Apps | *(none)* | Bundle IDs to skip (comma-separated) |
 | API Key | *(required)* | Your language model API key |
 
