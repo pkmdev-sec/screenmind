@@ -133,6 +133,25 @@ struct MenuBarContentView: View {
                     .onHover { hoveredButton = $0 ? "timeline" : nil }
                 }
                 .buttonStyle(.plain)
+
+                Button {
+                    openWindowFront(id: "chat")
+                } label: {
+                    HStack {
+                        Label("Chat with Notes", systemImage: "bubble.left.and.text.bubble.right")
+                            .font(.system(size: 12, weight: .medium))
+                        Spacer()
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 6)
+                    .contentShape(Rectangle())
+                    .background(
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(.quaternary.opacity(hoveredButton == "chat" ? 0.8 : 0))
+                    )
+                    .onHover { hoveredButton = $0 ? "chat" : nil }
+                }
+                .buttonStyle(.plain)
             }
 
             Divider()

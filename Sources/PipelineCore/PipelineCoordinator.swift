@@ -7,6 +7,7 @@ import AIProcessing
 import StorageCore
 import SystemIntegration
 import AudioCore
+import SemanticSearch
 import SwiftData
 
 /// Orchestrates the full capture → detection → OCR → AI → storage pipeline.
@@ -34,6 +35,7 @@ public actor PipelineCoordinator {
     private let resourceMonitor = ResourceMonitor.shared
     private let ocrCache = OCRCache()
     private let meetingDetector = MeetingDetectionActor()
+    private let semanticSearch = SemanticSearchActor()
     private let onNoteSaved: (@Sendable (String, String) -> Void)?
 
     public init(
@@ -72,6 +74,9 @@ public actor PipelineCoordinator {
         }
 
         await resourceMonitor.resetSession()
+
+        // Initialize semantic search
+        try? await semanticSearch.setup()
 
         // Request calendar access for meeting detection (non-blocking)
         if UserDefaults.standard.object(forKey: "audioMeetingDetection") as? Bool ?? true {
@@ -375,6 +380,10 @@ public actor PipelineCoordinator {
             // Record stats + learn tag patterns
             await resourceMonitor.recordNoteGenerated(aiTimeMs: 0)
             TagSuggester.recordTags(generatedNote.tags)
+
+            // Index for semantic search
+            let indexText = "\(generatedNote.title) \(generatedNote.summary) \(generatedNote.details)"
+            try? await semanticSearch.indexNote(noteID: savedNote.id.uuidString, text: indexText)
 
             // Enforce screenshot storage quota periodically (every 10 notes)
             let throughputStats = await resourceMonitor.currentThroughput()

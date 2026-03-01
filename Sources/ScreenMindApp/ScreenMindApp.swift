@@ -48,6 +48,14 @@ struct ScreenMindApp: App {
         .defaultSize(width: 1000, height: 700)
         .defaultPosition(.center)
 
+        // Chat window
+        Window("Chat with Notes", id: "chat") {
+            ChatView()
+                .modelContainer(modelContainer)
+        }
+        .defaultSize(width: 600, height: 500)
+        .defaultPosition(.center)
+
         // Onboarding window
         Window("Welcome to ScreenMind", id: "onboarding") {
             OnboardingView()

@@ -57,7 +57,8 @@ let package = Package(
                 "AIProcessing",
                 "StorageCore",
                 "SystemIntegration",
-                "AudioCore"
+                "AudioCore",
+                "SemanticSearch"
             ],
             path: "Sources/PipelineCore"
         ),
@@ -67,6 +68,13 @@ let package = Package(
             name: "AudioCore",
             dependencies: ["Shared"],
             path: "Sources/AudioCore"
+        ),
+
+        // MARK: - Semantic Search
+        .target(
+            name: "SemanticSearch",
+            dependencies: ["Shared", "StorageCore"],
+            path: "Sources/SemanticSearch"
         ),
 
         // MARK: - System Integration
@@ -88,7 +96,8 @@ let package = Package(
                 "StorageCore",
                 "PipelineCore",
                 "SystemIntegration",
-                "AudioCore"
+                "AudioCore",
+                "SemanticSearch"
             ],
             path: "Sources/ScreenMindApp"
         ),
