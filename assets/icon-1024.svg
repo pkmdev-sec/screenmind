@@ -1,0 +1,391 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <!-- macOS squircle clip -->
+    <clipPath id="squircle">
+      <rect x="0" y="0" width="1024" height="1024" rx="224" ry="224"/>
+    </clipPath>
+
+    <!-- Dark background gradient -->
+    <linearGradient id="darkBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0D0D0D"/>
+      <stop offset="50%" style="stop-color:#111118"/>
+      <stop offset="100%" style="stop-color:#0A0A12"/>
+    </linearGradient>
+
+    <!-- Brain pixel glow -->
+    <radialGradient id="brainGlow" cx="50%" cy="42%" r="35%">
+      <stop offset="0%" style="stop-color:#7C3AED;stop-opacity:0.25"/>
+      <stop offset="60%" style="stop-color:#4C1D95;stop-opacity:0.08"/>
+      <stop offset="100%" style="stop-color:#000000;stop-opacity:0"/>
+    </radialGradient>
+
+    <!-- Screen glow -->
+    <radialGradient id="screenGlow" cx="50%" cy="44%" r="30%">
+      <stop offset="0%" style="stop-color:#6366F1;stop-opacity:0.12"/>
+      <stop offset="100%" style="stop-color:#000000;stop-opacity:0"/>
+    </radialGradient>
+
+    <!-- Mirror polish — diagonal glass reflection -->
+    <linearGradient id="mirrorPolish" x1="0%" y1="0%" x2="70%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFFFFF;stop-opacity:0.12"/>
+      <stop offset="35%" style="stop-color:#FFFFFF;stop-opacity:0.06"/>
+      <stop offset="50%" style="stop-color:#FFFFFF;stop-opacity:0"/>
+      <stop offset="100%" style="stop-color:#FFFFFF;stop-opacity:0"/>
+    </linearGradient>
+
+    <!-- Pixel highlight -->
+    <linearGradient id="pixPurple" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#A78BFA"/>
+      <stop offset="100%" style="stop-color:#7C3AED"/>
+    </linearGradient>
+    <linearGradient id="pixIndigo" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#818CF8"/>
+      <stop offset="100%" style="stop-color:#6366F1"/>
+    </linearGradient>
+    <linearGradient id="pixCyan" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#67E8F9"/>
+      <stop offset="100%" style="stop-color:#22D3EE"/>
+    </linearGradient>
+    <linearGradient id="pixDeep" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#6D28D9"/>
+      <stop offset="100%" style="stop-color:#4C1D95"/>
+    </linearGradient>
+    <linearGradient id="pixDim" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#4338CA"/>
+      <stop offset="100%" style="stop-color:#312E81"/>
+    </linearGradient>
+
+    <!-- CRT scanline pattern -->
+    <pattern id="scanlines" width="4" height="4" patternUnits="userSpaceOnUse">
+      <rect width="4" height="2" fill="transparent"/>
+      <rect y="2" width="4" height="2" fill="black" opacity="0.06"/>
+    </pattern>
+
+    <!-- ASCII texture pattern -->
+    <pattern id="asciiTexture" width="120" height="120" patternUnits="userSpaceOnUse">
+      <text x="2" y="12" font-family="SF Mono, Menlo, monospace" font-size="10" fill="#7C3AED" opacity="0.04">01001101</text>
+      <text x="2" y="26" font-family="SF Mono, Menlo, monospace" font-size="10" fill="#6366F1" opacity="0.03">10110010</text>
+      <text x="2" y="40" font-family="SF Mono, Menlo, monospace" font-size="10" fill="#7C3AED" opacity="0.04">SCREENMIND</text>
+      <text x="2" y="54" font-family="SF Mono, Menlo, monospace" font-size="10" fill="#6366F1" opacity="0.03">11001011</text>
+      <text x="2" y="68" font-family="SF Mono, Menlo, monospace" font-size="10" fill="#7C3AED" opacity="0.04">00101110</text>
+      <text x="2" y="82" font-family="SF Mono, Menlo, monospace" font-size="10" fill="#6366F1" opacity="0.03">MEMORY.AI</text>
+      <text x="2" y="96" font-family="SF Mono, Menlo, monospace" font-size="10" fill="#7C3AED" opacity="0.04">10011101</text>
+      <text x="2" y="110" font-family="SF Mono, Menlo, monospace" font-size="10" fill="#6366F1" opacity="0.03">01110100</text>
+    </pattern>
+
+    <!-- Edge glow for screen frame -->
+    <filter id="edgeGlow">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Pixel drop shadow -->
+    <filter id="pixelShadow">
+      <feDropShadow dx="0" dy="2" stdDeviation="1" flood-color="#7C3AED" flood-opacity="0.5"/>
+    </filter>
+  </defs>
+
+  <!-- Clipped content -->
+  <g clip-path="url(#squircle)">
+
+    <!-- Deep black background -->
+    <rect width="1024" height="1024" fill="url(#darkBg)"/>
+
+    <!-- ASCII texture layer -->
+    <rect width="1024" height="1024" fill="url(#asciiTexture)"/>
+
+    <!-- Ambient brain glow -->
+    <rect width="1024" height="1024" fill="url(#brainGlow)"/>
+    <rect width="1024" height="1024" fill="url(#screenGlow)"/>
+
+    <!-- ═══════════════════════════════════════════════ -->
+    <!-- PIXEL ART MONITOR FRAME                         -->
+    <!-- Grid: 16px per pixel block                      -->
+    <!-- ═══════════════════════════════════════════════ -->
+
+    <!-- Monitor outer frame — pixel blocks (dark gray border) -->
+    <g opacity="0.9">
+      <!-- Top edge -->
+      <rect x="256" y="192" width="512" height="16" fill="#2A2A3A"/>
+      <!-- Bottom edge -->
+      <rect x="256" y="560" width="512" height="16" fill="#2A2A3A"/>
+      <!-- Left edge -->
+      <rect x="256" y="192" width="16" height="384" fill="#2A2A3A"/>
+      <!-- Right edge -->
+      <rect x="752" y="192" width="16" height="384" fill="#2A2A3A"/>
+
+      <!-- Pixel corners — chamfered -->
+      <rect x="240" y="208" width="16" height="16" fill="#2A2A3A"/>
+      <rect x="256" y="192" width="16" height="16" fill="#2A2A3A"/>
+      <rect x="752" y="192" width="16" height="16" fill="#2A2A3A"/>
+      <rect x="768" y="208" width="16" height="16" fill="#2A2A3A"/>
+      <rect x="240" y="544" width="16" height="16" fill="#2A2A3A"/>
+      <rect x="768" y="544" width="16" height="16" fill="#2A2A3A"/>
+    </g>
+
+    <!-- Monitor screen background — deep black -->
+    <rect x="272" y="208" width="480" height="352" fill="#080810"/>
+
+    <!-- Screen inner border glow -->
+    <rect x="272" y="208" width="480" height="352" fill="none" stroke="#4338CA" stroke-width="1" opacity="0.3"/>
+
+    <!-- Monitor stand — pixel blocks -->
+    <rect x="480" y="576" width="64" height="32" fill="#1E1E2E"/>
+    <rect x="464" y="608" width="96" height="16" fill="#2A2A3A"/>
+    <rect x="448" y="624" width="128" height="16" fill="#1E1E2E"/>
+
+    <!-- ═══════════════════════════════════════════════ -->
+    <!-- PIXEL ART BRAIN — rendered as 16x16px blocks    -->
+    <!-- Each rect is one "pixel" in the art              -->
+    <!-- ═══════════════════════════════════════════════ -->
+
+    <g filter="url(#pixelShadow)">
+
+      <!-- ~~~ ROW 1 (y=240): Top of brain ~~~ -->
+      <rect x="432" y="240" width="16" height="16" fill="url(#pixDim)"/>
+      <rect x="448" y="240" width="16" height="16" fill="url(#pixIndigo)"/>
+      <rect x="464" y="240" width="16" height="16" fill="url(#pixPurple)"/>
+      <rect x="480" y="240" width="16" height="16" fill="url(#pixPurple)"/>
+      <rect x="496" y="240" width="16" height="16" fill="url(#pixPurple)"/>
+      <rect x="512" y="240" width="16" height="16" fill="url(#pixPurple)"/>
+      <rect x="528" y="240" width="16" height="16" fill="url(#pixIndigo)"/>
+      <rect x="544" y="240" width="16" height="16" fill="url(#pixIndigo)"/>
+      <rect x="560" y="240" width="16" height="16" fill="url(#pixDim)"/>
+
+      <!-- ~~~ ROW 2 (y=256): Expanding top ~~~ -->
+      <rect x="400" y="256" width="16" height="16" fill="url(#pixDim)"/>
+      <rect x="416" y="256" width="16" height="16" fill="url(#pixIndigo)"/>
+      <rect x="432" y="256" width="16" height="16" fill="url(#pixPurple)"/>
+      <rect x="448" y="256" width="16" height="16" fill="url(#pixCyan)"/>
+      <rect x="464" y="256" width="16" height="16" fill="url(#pixPurple)"/>
+      <rect x="480" y="256" width="16" height="16" fill="url(#pixIndigo)"/>
+      <rect x="496" y="256" width="16" height="16" fill="url(#pixPurple)"/>
+      <rect x="512" y="256" width="16" height="16" fill="url(#pixCyan)"/>
+      <rect x="528" y="256" width="16" height="16" fill="url(#pixPurple)"/>
+      <rect x="544" y="256" width="16" height="16" fill="url(#pixIndigo)"/>
+      <rect x="560" y="256" width="16" height="16" fill="url(#pixPurple)"/>
+      <rect x="576" y="256" width="16" height="16" fill="url(#pixDim)"/>
+
+      <!-- ~~~ ROW 3 (y=272): Wide upper ~~~ -->
+      <rect x="384" y="272" width="16" height="16" fill="url(#pixDeep)"/>
+      <rect x="400" y="272" width="16" height="16" fill="url(#pixPurple)"/>
+      <rect x="416" y="272" width="16" height="16" fill="url(#pixCyan)"/>
+      <rect x="432" y="272" width="16" height="16" fill="url(#pixPurple)"/>
+      <rect x="448" y="272" width="16" height="16" fill="url(#pixIndigo)"/>
+      <rect x="464" y="272" width="16" height="16" fill="url(#pixPurple)"/>
+      <rect x="480" y="272" width="16" height="16" fill="url(#pixDeep)" opacity="0.4"/>
+      <rect x="496" y="272" width="16" height="16" fill="url(#pixDeep)" opacity="0.4"/>
+      <rect x="512" y="272" width="16" height="16" fill="url(#pixPurple)"/>
+      <rect x="528" y="272" width="16" height="16" fill="url(#pixIndigo)"/>
+      <rect x="544" y="272" width="16" height="16" fill="url(#pixCyan)"/>
+      <rect x="560" y="272" width="16" height="16" fill="url(#pixPurple)"/>
+      <rect x="576" y="272" width="16" height="16" fill="url(#pixPurple)"/>
+      <rect x="592" y="272" width="16" height="16" fill="url(#pixDeep)"/>
+
+      <!-- ~~~ ROW 4 (y=288): Left lobe fold ~~~ -->
+      <rect x="368" y="288" width="16" height="16" fill="url(#pixDeep)"/>
+      <rect x="384" y="288" width="16" height="16" fill="url(#pixPurple)"/>
+      <rect x="400" y="288" width="16" height="16" fill="url(#pixIndigo)"/>
+      <rect x="416" y="288" width="16" height="16" fill="url(#pixPurple)"/>
+      <rect x="432" y="288" width="16" height="16" fill="url(#pixCyan)"/>
+      <rect x="448" y="288" width="16" height="16" fill="url(#pixPurple)"/>
+      <rect x="464" y="288" width="16" height="16" fill="url(#pixIndigo)"/>
+      <rect x="480" y="288" width="16" height="16" fill="#1a1a2e" opacity="0.6"/>
+      <rect x="496" y="288" width="16" height="16" fill="#1a1a2e" opacity="0.6"/>
+      <rect x="512" y="288" width="16" height="16" fill="url(#pixIndigo)"/>
+      <rect x="528" y="288" width="16" height="16" fill="url(#pixPurple)"/>
+      <rect x="544" y="288" width="16" height="16" fill="url(#pixCyan)"/>
+      <rect x="560" y="288" width="16" height="16" fill="url(#pixPurple)"/>
+      <rect x="576" y="288" width="16" height="16" fill="url(#pixIndigo)"/>
+      <rect x="592" y="288" width="16" height="16" fill="url(#pixPurple)"/>
+      <rect x="608" y="288" width="16" height="16" fill="url(#pixDeep)"/>
+
+      <!-- ~~~ ROW 5 (y=304): Widest ~~~ -->
+      <rect x="352" y="304" width="16" height="16" fill="url(#pixDeep)"/>
+      <rect x="368" y="304" width="16" height="16" fill="url(#pixIndigo)"/>
+      <rect x="384" y="304" width="16" height="16" fill="url(#pixPurple)"/>
+      <rect x="400" y="304" width="16" height="16" fill="url(#pixCyan)"/>
+      <rect x="416" y="304" width="16" height="16" fill="url(#pixPurple)"/>
+      <rect x="432" y="304" width="16" height="16" fill="url(#pixIndigo)"/>
+      <rect x="448" y="304" width="16" height="16" fill="url(#pixPurple)"/>
+      <rect x="464" y="304" width="16" height="16" fill="url(#pixDeep)"/>
+      <rect x="480" y="304" width="16" height="16" fill="#1a1a2e" opacity="0.5"/>
+      <rect x="496" y="304" width="16" height="16" fill="#1a1a2e" opacity="0.5"/>
+      <rect x="512" y="304" width="16" height="16" fill="url(#pixDeep)"/>
+      <rect x="528" y="304" width="16" height="16" fill="url(#pixPurple)"/>
+      <rect x="544" y="304" width="16" height="16" fill="url(#pixIndigo)"/>
+      <rect x="560" y="304" width="16" height="16" fill="url(#pixPurple)"/>
+      <rect x="576" y="304" width="16" height="16" fill="url(#pixCyan)"/>
+      <rect x="592" y="304" width="16" height="16" fill="url(#pixPurple)"/>
+      <rect x="608" y="304" width="16" height="16" fill="url(#pixIndigo)"/>
+      <rect x="624" y="304" width="16" height="16" fill="url(#pixDeep)"/>
+
+      <!-- ~~~ ROW 6 (y=320): Mid with sulci ~~~ -->
+      <rect x="352" y="320" width="16" height="16" fill="url(#pixDeep)"/>
+      <rect x="368" y="320" width="16" height="16" fill="url(#pixPurple)"/>
+      <rect x="384" y="320" width="16" height="16" fill="url(#pixIndigo)"/>
+      <rect x="400" y="320" width="16" height="16" fill="url(#pixPurple)"/>
+      <rect x="416" y="320" width="16" height="16" fill="url(#pixCyan)"/>
+      <rect x="432" y="320" width="16" height="16" fill="url(#pixPurple)"/>
+      <rect x="448" y="320" width="16" height="16" fill="url(#pixPurple)"/>
+      <rect x="464" y="320" width="16" height="16" fill="url(#pixIndigo)"/>
+      <rect x="480" y="320" width="16" height="16" fill="#1a1a2e" opacity="0.5"/>
+      <rect x="496" y="320" width="16" height="16" fill="#1a1a2e" opacity="0.5"/>
+      <rect x="512" y="320" width="16" height="16" fill="url(#pixIndigo)"/>
+      <rect x="528" y="320" width="16" height="16" fill="url(#pixPurple)"/>
+      <rect x="544" y="320" width="16" height="16" fill="url(#pixPurple)"/>
+      <rect x="560" y="320" width="16" height="16" fill="url(#pixCyan)"/>
+      <rect x="576" y="320" width="16" height="16" fill="url(#pixPurple)"/>
+      <rect x="592" y="320" width="16" height="16" fill="url(#pixIndigo)"/>
+      <rect x="608" y="320" width="16" height="16" fill="url(#pixPurple)"/>
+      <rect x="624" y="320" width="16" height="16" fill="url(#pixDeep)"/>
+
+      <!-- ~~~ ROW 7 (y=336): Lower mid ~~~ -->
+      <rect x="352" y="336" width="16" height="16" fill="url(#pixDeep)"/>
+      <rect x="368" y="336" width="16" height="16" fill="url(#pixIndigo)"/>
+      <rect x="384" y="336" width="16" height="16" fill="url(#pixPurple)"/>
+      <rect x="400" y="336" width="16" height="16" fill="url(#pixPurple)"/>
+      <rect x="416" y="336" width="16" height="16" fill="url(#pixIndigo)"/>
+      <rect x="432" y="336" width="16" height="16" fill="url(#pixCyan)"/>
+      <rect x="448" y="336" width="16" height="16" fill="url(#pixPurple)"/>
+      <rect x="464" y="336" width="16" height="16" fill="url(#pixPurple)"/>
+      <rect x="480" y="336" width="16" height="16" fill="#1a1a2e" opacity="0.4"/>
+      <rect x="496" y="336" width="16" height="16" fill="#1a1a2e" opacity="0.4"/>
+      <rect x="512" y="336" width="16" height="16" fill="url(#pixPurple)"/>
+      <rect x="528" y="336" width="16" height="16" fill="url(#pixPurple)"/>
+      <rect x="544" y="336" width="16" height="16" fill="url(#pixCyan)"/>
+      <rect x="560" y="336" width="16" height="16" fill="url(#pixIndigo)"/>
+      <rect x="576" y="336" width="16" height="16" fill="url(#pixPurple)"/>
+      <rect x="592" y="336" width="16" height="16" fill="url(#pixPurple)"/>
+      <rect x="608" y="336" width="16" height="16" fill="url(#pixIndigo)"/>
+      <rect x="624" y="336" width="16" height="16" fill="url(#pixDeep)"/>
+
+      <!-- ~~~ ROW 8 (y=352): Tapering ~~~ -->
+      <rect x="368" y="352" width="16" height="16" fill="url(#pixDeep)"/>
+      <rect x="384" y="352" width="16" height="16" fill="url(#pixPurple)"/>
+      <rect x="400" y="352" width="16" height="16" fill="url(#pixCyan)"/>
+      <rect x="416" y="352" width="16" height="16" fill="url(#pixPurple)"/>
+      <rect x="432" y="352" width="16" height="16" fill="url(#pixIndigo)"/>
+      <rect x="448" y="352" width="16" height="16" fill="url(#pixPurple)"/>
+      <rect x="464" y="352" width="16" height="16" fill="url(#pixIndigo)"/>
+      <rect x="480" y="352" width="16" height="16" fill="url(#pixDeep)" opacity="0.5"/>
+      <rect x="496" y="352" width="16" height="16" fill="url(#pixDeep)" opacity="0.5"/>
+      <rect x="512" y="352" width="16" height="16" fill="url(#pixIndigo)"/>
+      <rect x="528" y="352" width="16" height="16" fill="url(#pixPurple)"/>
+      <rect x="544" y="352" width="16" height="16" fill="url(#pixIndigo)"/>
+      <rect x="560" y="352" width="16" height="16" fill="url(#pixPurple)"/>
+      <rect x="576" y="352" width="16" height="16" fill="url(#pixCyan)"/>
+      <rect x="592" y="352" width="16" height="16" fill="url(#pixPurple)"/>
+      <rect x="608" y="352" width="16" height="16" fill="url(#pixDeep)"/>
+
+      <!-- ~~~ ROW 9 (y=368): Narrowing ~~~ -->
+      <rect x="384" y="368" width="16" height="16" fill="url(#pixDeep)"/>
+      <rect x="400" y="368" width="16" height="16" fill="url(#pixIndigo)"/>
+      <rect x="416" y="368" width="16" height="16" fill="url(#pixPurple)"/>
+      <rect x="432" y="368" width="16" height="16" fill="url(#pixPurple)"/>
+      <rect x="448" y="368" width="16" height="16" fill="url(#pixCyan)"/>
+      <rect x="464" y="368" width="16" height="16" fill="url(#pixPurple)"/>
+      <rect x="480" y="368" width="16" height="16" fill="url(#pixIndigo)"/>
+      <rect x="496" y="368" width="16" height="16" fill="url(#pixIndigo)"/>
+      <rect x="512" y="368" width="16" height="16" fill="url(#pixPurple)"/>
+      <rect x="528" y="368" width="16" height="16" fill="url(#pixCyan)"/>
+      <rect x="544" y="368" width="16" height="16" fill="url(#pixPurple)"/>
+      <rect x="560" y="368" width="16" height="16" fill="url(#pixPurple)"/>
+      <rect x="576" y="368" width="16" height="16" fill="url(#pixIndigo)"/>
+      <rect x="592" y="368" width="16" height="16" fill="url(#pixDeep)"/>
+
+      <!-- ~~~ ROW 10 (y=384): Stem area ~~~ -->
+      <rect x="400" y="384" width="16" height="16" fill="url(#pixDeep)"/>
+      <rect x="416" y="384" width="16" height="16" fill="url(#pixDim)"/>
+      <rect x="432" y="384" width="16" height="16" fill="url(#pixIndigo)"/>
+      <rect x="448" y="384" width="16" height="16" fill="url(#pixPurple)"/>
+      <rect x="464" y="384" width="16" height="16" fill="url(#pixPurple)"/>
+      <rect x="480" y="384" width="16" height="16" fill="url(#pixPurple)"/>
+      <rect x="496" y="384" width="16" height="16" fill="url(#pixPurple)"/>
+      <rect x="512" y="384" width="16" height="16" fill="url(#pixPurple)"/>
+      <rect x="528" y="384" width="16" height="16" fill="url(#pixPurple)"/>
+      <rect x="544" y="384" width="16" height="16" fill="url(#pixIndigo)"/>
+      <rect x="560" y="384" width="16" height="16" fill="url(#pixDim)"/>
+      <rect x="576" y="384" width="16" height="16" fill="url(#pixDeep)"/>
+
+      <!-- ~~~ ROW 11 (y=400): Brain stem ~~~ -->
+      <rect x="448" y="400" width="16" height="16" fill="url(#pixDeep)"/>
+      <rect x="464" y="400" width="16" height="16" fill="url(#pixDim)"/>
+      <rect x="480" y="400" width="16" height="16" fill="url(#pixIndigo)"/>
+      <rect x="496" y="400" width="16" height="16" fill="url(#pixIndigo)"/>
+      <rect x="512" y="400" width="16" height="16" fill="url(#pixDim)"/>
+      <rect x="528" y="400" width="16" height="16" fill="url(#pixDeep)"/>
+
+      <!-- Neural pulse dots — bright cyan sparks -->
+      <rect x="448" y="256" width="16" height="16" fill="url(#pixCyan)" opacity="0.9">
+        <animate attributeName="opacity" values="0.5;0.95;0.5" dur="1.5s" repeatCount="indefinite"/>
+      </rect>
+      <rect x="512" y="256" width="16" height="16" fill="url(#pixCyan)" opacity="0.9">
+        <animate attributeName="opacity" values="0.6;1;0.6" dur="2s" repeatCount="indefinite"/>
+      </rect>
+      <rect x="400" y="304" width="16" height="16" fill="url(#pixCyan)" opacity="0.85">
+        <animate attributeName="opacity" values="0.4;0.9;0.4" dur="1.8s" repeatCount="indefinite"/>
+      </rect>
+      <rect x="576" y="304" width="16" height="16" fill="url(#pixCyan)" opacity="0.85">
+        <animate attributeName="opacity" values="0.5;0.95;0.5" dur="2.2s" repeatCount="indefinite"/>
+      </rect>
+    </g>
+
+    <!-- Floating data particles around brain -->
+    <g opacity="0.7">
+      <rect x="320" y="260" width="8" height="8" fill="#22D3EE" opacity="0.6">
+        <animate attributeName="opacity" values="0.2;0.7;0.2" dur="3s" repeatCount="indefinite"/>
+      </rect>
+      <rect x="680" y="280" width="8" height="8" fill="#A78BFA" opacity="0.5">
+        <animate attributeName="opacity" values="0.3;0.8;0.3" dur="2.5s" repeatCount="indefinite"/>
+      </rect>
+      <rect x="340" y="400" width="6" height="6" fill="#67E8F9" opacity="0.4">
+        <animate attributeName="opacity" values="0.2;0.6;0.2" dur="4s" repeatCount="indefinite"/>
+      </rect>
+      <rect x="660" y="380" width="6" height="6" fill="#818CF8" opacity="0.5">
+        <animate attributeName="opacity" values="0.3;0.7;0.3" dur="3.5s" repeatCount="indefinite"/>
+      </rect>
+      <rect x="300" y="340" width="4" height="4" fill="#C4B5FD" opacity="0.3">
+        <animate attributeName="opacity" values="0.1;0.5;0.1" dur="2s" repeatCount="indefinite"/>
+      </rect>
+      <rect x="700" y="330" width="4" height="4" fill="#C4B5FD" opacity="0.3">
+        <animate attributeName="opacity" values="0.2;0.6;0.2" dur="2.8s" repeatCount="indefinite"/>
+      </rect>
+    </g>
+
+    <!-- ASCII art text layer — visible faintly inside screen -->
+    <g opacity="0.06">
+      <text x="292" y="228" font-family="SF Mono, Menlo, monospace" font-size="9" fill="#A78BFA">if screen.changed { brain.remember() }</text>
+      <text x="292" y="540" font-family="SF Mono, Menlo, monospace" font-size="9" fill="#A78BFA">fn capture() -> Note { analyze(ocr(frame)) }</text>
+      <text x="292" y="430" font-family="SF Mono, Menlo, monospace" font-size="9" fill="#6366F1">while awake { observe(); learn(); note(); }</text>
+      <text x="620" y="430" font-family="SF Mono, Menlo, monospace" font-size="9" fill="#6366F1">// never forget</text>
+    </g>
+
+    <!-- CRT scanline overlay -->
+    <rect width="1024" height="1024" fill="url(#scanlines)"/>
+
+    <!-- Mirror polish — diagonal glass reflection -->
+    <rect width="1024" height="1024" fill="url(#mirrorPolish)" rx="224"/>
+
+    <!-- Top-left highlight arc for depth -->
+    <ellipse cx="340" cy="280" rx="300" ry="200" fill="white" opacity="0.015"/>
+
+    <!-- Subtle vignette -->
+    <radialGradient id="vignette" cx="50%" cy="50%" r="60%">
+      <stop offset="70%" style="stop-color:transparent"/>
+      <stop offset="100%" style="stop-color:black;stop-opacity:0.4"/>
+    </radialGradient>
+    <rect width="1024" height="1024" fill="url(#vignette)"/>
+
+    <!-- Bottom label — pixel style -->
+    <text x="512" y="750" font-family="SF Mono, Menlo, monospace" font-size="28" font-weight="700" fill="#7C3AED" text-anchor="middle" letter-spacing="8" opacity="0.8">SCREENMIND</text>
+    <text x="512" y="782" font-family="SF Mono, Menlo, monospace" font-size="12" fill="#4338CA" text-anchor="middle" letter-spacing="6" opacity="0.5">SCREEN MEMORY</text>
+
+  </g>
+
+  <!-- Outer squircle border — subtle dark edge -->
+  <rect x="0" y="0" width="1024" height="1024" rx="224" ry="224" fill="none" stroke="#2A2A3A" stroke-width="2" opacity="0.5"/>
+</svg>

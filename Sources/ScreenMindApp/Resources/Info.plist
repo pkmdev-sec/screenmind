@@ -28,6 +28,8 @@
     <string>Copyright © 2026 ScreenMind. All rights reserved.</string>
     <key>NSScreenCaptureUsageDescription</key>
     <string>ScreenMind needs screen recording access to capture your screen, extract text via OCR, and generate AI-powered notes about what you're working on.</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
     <key>NSHighResolutionCapable</key>
     <true/>
     <key>NSSupportsAutomaticTermination</key>
