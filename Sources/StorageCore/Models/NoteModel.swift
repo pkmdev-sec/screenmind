@@ -16,6 +16,7 @@ public final class NoteModel {
     public var createdAt: Date
     public var obsidianLinks: [String]
     public var obsidianExported: Bool
+    public var redactionCount: Int = 0
 
     @Relationship(deleteRule: .cascade)
     public var screenshot: ScreenshotModel?
@@ -33,7 +34,8 @@ public final class NoteModel {
         appName: String,
         windowTitle: String? = nil,
         obsidianLinks: [String] = [],
-        obsidianExported: Bool = false
+        obsidianExported: Bool = false,
+        redactionCount: Int = 0
     ) {
         self.id = UUID()
         self.title = title
@@ -47,5 +49,6 @@ public final class NoteModel {
         self.createdAt = .now
         self.obsidianLinks = obsidianLinks
         self.obsidianExported = obsidianExported
+        self.redactionCount = redactionCount
     }
 }

@@ -16,6 +16,7 @@ public final class KeyboardShortcutsManager: @unchecked Sendable {
         case toggleMonitoring
         case togglePause
         case openNotesBrowser
+        case openTimeline
     }
 
     private var eventHandler: EventHandlerRef?
@@ -42,6 +43,10 @@ public final class KeyboardShortcutsManager: @unchecked Sendable {
         let hotKeyID3 = EventHotKeyID(signature: fourCharCode("SMn3"), id: 3)
         RegisterEventHotKey(UInt32(kVK_ANSI_S), modifiers, hotKeyID3, GetEventDispatcherTarget(), 0, &hotKeyRef)
 
+        // ⌘⇧T — Open timeline (keycode 17 = T)
+        let hotKeyID4 = EventHotKeyID(signature: fourCharCode("SMn4"), id: 4)
+        RegisterEventHotKey(UInt32(kVK_ANSI_T), modifiers, hotKeyID4, GetEventDispatcherTarget(), 0, &hotKeyRef)
+
         // Install event handler
         var eventType = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
 
@@ -57,6 +62,7 @@ public final class KeyboardShortcutsManager: @unchecked Sendable {
             case 1: manager.actionCallback?(.toggleMonitoring)
             case 2: manager.actionCallback?(.togglePause)
             case 3: manager.actionCallback?(.openNotesBrowser)
+            case 4: manager.actionCallback?(.openTimeline)
             default: break
             }
 

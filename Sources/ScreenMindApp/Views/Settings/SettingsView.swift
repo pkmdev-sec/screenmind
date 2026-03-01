@@ -20,11 +20,16 @@ struct SettingsView: View {
                     Label("AI", systemImage: "brain")
                 }
 
+            ExportSettingsView()
+                .tabItem {
+                    Label("Export", systemImage: "square.and.arrow.up")
+                }
+
             PrivacySettingsView()
                 .tabItem {
                     Label("Privacy", systemImage: "lock.shield.fill")
                 }
         }
-        .frame(width: 540, height: 460)
+        .frame(width: 580, height: 560)
     }
 }

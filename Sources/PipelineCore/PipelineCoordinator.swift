@@ -28,6 +28,7 @@ public actor PipelineCoordinator {
     private let powerMonitor = PowerStateMonitor()
     private let spotlightIndexer = SpotlightIndexer()
     private let errorBoundary = ErrorBoundary()
+    private let auditLogger = AuditLogger()
     private let onNoteSaved: (@Sendable (String, String) -> Void)?
 
     public init(
@@ -178,8 +179,43 @@ public actor PipelineCoordinator {
         let textPreview = String(recognizedText.text.prefix(80))
         SMLogger.pipeline.info("OCR: \(textPreview, privacy: .public)")
 
+        // Stage 3b: Skip Rules — user-defined pattern-based skip logic (saves API costs)
+        let skipResult = SkipRuleEngine.evaluate(
+            text: recognizedText.text,
+            appName: frame.appName,
+            windowTitle: frame.windowTitle
+        )
+        if skipResult.shouldSkip {
+            if let rule = skipResult.matchedRule {
+                await auditLogger.log(action: .skipped, appName: frame.appName, reason: "Skip rule: \(rule.name)")
+            }
+            return
+        }
+
+        // Stage 3c: Content Redaction — remove sensitive data before AI processing
+        let redactionResult = ContentRedactor.redact(recognizedText.text)
+        let processedText: RecognizedText
+        if redactionResult.redactionCount > 0 {
+            processedText = RecognizedText(
+                text: redactionResult.text,
+                averageConfidence: recognizedText.averageConfidence,
+                wordCount: recognizedText.wordCount,
+                processingTime: recognizedText.processingTime,
+                appName: recognizedText.appName,
+                windowTitle: recognizedText.windowTitle,
+                timestamp: recognizedText.timestamp
+            )
+            await auditLogger.log(
+                action: .redacted,
+                appName: frame.appName,
+                reason: "Redacted \(redactionResult.redactionCount) fields: \(redactionResult.redactedTypes.joined(separator: ", "))"
+            )
+        } else {
+            processedText = recognizedText
+        }
+
         // Stage 4: Content dedup — skip if text is too similar to recent notes
-        let sample = String(recognizedText.text.prefix(AppConstants.Pipeline.textSampleLength))
+        let sample = String(processedText.text.prefix(AppConstants.Pipeline.textSampleLength))
         let words = extractWords(sample)
         let hash = fnv1aHash(words)
         if isTextDuplicate(hash: hash, words: words) {
@@ -187,14 +223,20 @@ public actor PipelineCoordinator {
             return
         }
 
-        // Stage 5: Save screenshot
+        // Stage 5: Save screenshot (with optional encryption)
         var screenshotPath: String?
         do {
-            screenshotPath = try screenshotManager.save(
+            var path = try screenshotManager.save(
                 frame.image,
                 hash: significantFrame.hash,
                 timestamp: frame.timestamp
             )
+            // Encrypt if enabled
+            if ScreenshotEncryptor.isEnabled {
+                path = try ScreenshotEncryptor.encryptFile(at: path)
+                await auditLogger.log(action: .encrypted, appName: frame.appName, reason: "Screenshot encrypted")
+            }
+            screenshotPath = path
         } catch {
             let msg = String(describing: error)
             SMLogger.pipeline.error("Screenshot save failed: \(msg, privacy: .public)")
@@ -207,7 +249,7 @@ public actor PipelineCoordinator {
             fallback: nil
         ) { [aiProcessor, lastNoteTitle = self.lastNoteTitle, lastNoteApp = self.lastNoteApp] in
             try await aiProcessor.generateNote(
-                from: recognizedText,
+                from: processedText,
                 lastNoteTitle: lastNoteTitle,
                 lastNoteApp: lastNoteApp
             )
@@ -230,9 +272,17 @@ public actor PipelineCoordinator {
                 hash: significantFrame.hash,
                 imageWidth: frame.image.width,
                 imageHeight: frame.image.height,
-                timestamp: frame.timestamp
+                timestamp: frame.timestamp,
+                redactionCount: redactionResult.redactionCount
             )
-            SMLogger.pipeline.info("Note saved to storage + Obsidian")
+            SMLogger.pipeline.info("Note saved to storage + exporters")
+
+            // Audit log
+            await auditLogger.log(
+                action: .captured,
+                appName: frame.appName,
+                reason: "Note: \(generatedNote.title)"
+            )
 
             // Spotlight indexing
             await spotlightIndexer.indexNote(

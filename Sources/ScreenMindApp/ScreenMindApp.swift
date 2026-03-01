@@ -40,6 +40,14 @@ struct ScreenMindApp: App {
         .defaultSize(width: 900, height: 600)
         .defaultPosition(.center)
 
+        // Timeline window
+        Window("Timeline", id: "timeline") {
+            TimelineView()
+                .modelContainer(modelContainer)
+        }
+        .defaultSize(width: 1000, height: 700)
+        .defaultPosition(.center)
+
         // Onboarding window
         Window("Welcome to ScreenMind", id: "onboarding") {
             OnboardingView()
@@ -110,6 +118,12 @@ struct ScreenMindApp: App {
                                 window.makeKeyAndOrderFront(nil)
                             } else {
                                 NSApp.sendAction(Selector(("openWindow:")), to: nil, from: "notes-browser")
+                            }
+                        case .openTimeline:
+                            if let window = NSApp.windows.first(where: { $0.identifier?.rawValue == "timeline" }) {
+                                window.makeKeyAndOrderFront(nil)
+                            } else {
+                                NSApp.sendAction(Selector(("openWindow:")), to: nil, from: "timeline")
                             }
                         }
                     }

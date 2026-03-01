@@ -64,27 +64,51 @@ struct MenuBarContentView: View {
             Divider()
                 .padding(.horizontal, 8)
 
+            // Quick Search
+            QuickSearchView()
+                .padding(.vertical, 4)
+
+            Divider()
+                .padding(.horizontal, 8)
+
             // Recent Notes
             RecentNotesListView()
                 .padding(.vertical, 4)
                 .frame(maxHeight: 200)
 
-            Button {
-                openWindow(id: "notes-browser")
-            } label: {
-                HStack {
-                    Label("Browse All Notes", systemImage: "rectangle.grid.1x2")
-                        .font(.system(size: 12, weight: .medium))
-                    Spacer()
-                    Image(systemName: "arrow.up.forward.square")
-                        .font(.system(size: 10))
-                        .foregroundStyle(.tertiary)
+            // Action buttons
+            HStack(spacing: 0) {
+                Button {
+                    openWindow(id: "notes-browser")
+                } label: {
+                    HStack {
+                        Label("Browse Notes", systemImage: "rectangle.grid.1x2")
+                            .font(.system(size: 12, weight: .medium))
+                        Spacer()
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 6)
+                    .contentShape(Rectangle())
                 }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 6)
-                .contentShape(Rectangle())
+                .buttonStyle(.plain)
+
+                Button {
+                    openWindow(id: "timeline")
+                } label: {
+                    HStack {
+                        Label("Timeline", systemImage: "clock.arrow.trianglehead.counterclockwise.rotate.90")
+                            .font(.system(size: 12, weight: .medium))
+                        Spacer()
+                        Text("T")
+                            .font(.system(size: 10, design: .monospaced))
+                            .foregroundStyle(.tertiary)
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 6)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
 
             Divider()
                 .padding(.horizontal, 8)

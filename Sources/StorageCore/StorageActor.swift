@@ -6,8 +6,10 @@ import AIProcessing
 /// Actor-isolated persistence layer for notes and screenshots.
 @ModelActor
 public actor StorageActor {
-    private let obsidianWriter = ObsidianNoteWriter()
     private let summaryWriter = DailySummaryWriter()
+    /// Cached exporters — built once per actor lifetime.
+    /// Users must restart monitoring (or reconfigure) for export setting changes to take effect.
+    private lazy var exporters: [any NoteExporter] = ExporterFactory.enabledExporters()
 
     /// Save a generated note with optional screenshot data.
     public func saveNote(
@@ -18,8 +20,9 @@ public actor StorageActor {
         hash: UInt64,
         imageWidth: Int,
         imageHeight: Int,
-        timestamp: Date
-    ) throws -> NoteModel {
+        timestamp: Date,
+        redactionCount: Int = 0
+    ) async throws -> NoteModel {
         let noteModel = NoteModel(
             title: generatedNote.title,
             summary: generatedNote.summary,
@@ -29,7 +32,8 @@ public actor StorageActor {
             confidence: generatedNote.confidence,
             appName: appName,
             windowTitle: windowTitle,
-            obsidianLinks: generatedNote.obsidianLinks
+            obsidianLinks: generatedNote.obsidianLinks,
+            redactionCount: redactionCount
         )
 
         if let path = screenshotPath {
@@ -52,21 +56,27 @@ public actor StorageActor {
         modelContext.insert(noteModel)
         try modelContext.save()
 
-        // Export to Obsidian
-        do {
-            _ = try obsidianWriter.write(
-                note: generatedNote,
-                appName: appName,
-                windowTitle: windowTitle,
-                timestamp: timestamp
-            )
-            noteModel.obsidianExported = true
+        // Run all enabled exporters (cached for performance)
+        for exporter in exporters {
+            do {
+                _ = try await exporter.export(
+                    note: generatedNote,
+                    appName: appName,
+                    windowTitle: windowTitle,
+                    timestamp: timestamp
+                )
+                if exporter.exporterType == .obsidian {
+                    noteModel.obsidianExported = true
+                }
+            } catch {
+                SMLogger.storage.warning("\(exporter.exporterType.rawValue) export failed: \(error.localizedDescription)")
+            }
+        }
+        if noteModel.obsidianExported {
             try modelContext.save()
-        } catch {
-            SMLogger.storage.warning("Obsidian export failed: \(error.localizedDescription)")
         }
 
-        SMLogger.storage.info("Note saved: \(generatedNote.title)")
+        SMLogger.storage.info("Note saved: \(generatedNote.title) (\(self.exporters.count) exporters)")
         return noteModel
     }
 
@@ -100,6 +110,97 @@ public actor StorageActor {
             sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
         )
         return try modelContext.fetch(descriptor)
+    }
+
+    /// Advanced search with optional category and date range filters.
+    public func searchNotes(query: String, category: String?, from startDate: Date?, to endDate: Date?, appName: String?, limit: Int = 50) throws -> [NoteModel] {
+        // Build the predicate based on which filters are active
+        let predicate: Predicate<NoteModel>
+
+        if let category, let startDate, let endDate {
+            if query.isEmpty {
+                predicate = #Predicate { note in
+                    note.category == category &&
+                    note.createdAt >= startDate && note.createdAt <= endDate
+                }
+            } else {
+                predicate = #Predicate { note in
+                    (note.title.localizedStandardContains(query) ||
+                     note.summary.localizedStandardContains(query) ||
+                     note.details.localizedStandardContains(query) ||
+                     note.appName.localizedStandardContains(query)) &&
+                    note.category == category &&
+                    note.createdAt >= startDate && note.createdAt <= endDate
+                }
+            }
+        } else if let category {
+            if query.isEmpty {
+                predicate = #Predicate { note in
+                    note.category == category
+                }
+            } else {
+                predicate = #Predicate { note in
+                    (note.title.localizedStandardContains(query) ||
+                     note.summary.localizedStandardContains(query) ||
+                     note.details.localizedStandardContains(query) ||
+                     note.appName.localizedStandardContains(query)) &&
+                    note.category == category
+                }
+            }
+        } else if let startDate, let endDate {
+            if query.isEmpty {
+                predicate = #Predicate { note in
+                    note.createdAt >= startDate && note.createdAt <= endDate
+                }
+            } else {
+                predicate = #Predicate { note in
+                    (note.title.localizedStandardContains(query) ||
+                     note.summary.localizedStandardContains(query) ||
+                     note.details.localizedStandardContains(query) ||
+                     note.appName.localizedStandardContains(query)) &&
+                    note.createdAt >= startDate && note.createdAt <= endDate
+                }
+            }
+        } else if query.isEmpty {
+            predicate = #Predicate<NoteModel> { _ in true }
+        } else {
+            predicate = #Predicate { note in
+                note.title.localizedStandardContains(query) ||
+                note.summary.localizedStandardContains(query) ||
+                note.details.localizedStandardContains(query) ||
+                note.appName.localizedStandardContains(query)
+            }
+        }
+
+        var descriptor = FetchDescriptor<NoteModel>(
+            predicate: predicate,
+            sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
+        )
+        descriptor.fetchLimit = limit
+        return try modelContext.fetch(descriptor)
+    }
+
+    /// Get distinct app names from all notes for filter UI.
+    public func distinctAppNames() throws -> [String] {
+        let descriptor = FetchDescriptor<NoteModel>(
+            sortBy: [SortDescriptor(\.appName)]
+        )
+        let notes = try modelContext.fetch(descriptor)
+        return Array(Set(notes.map(\.appName))).sorted()
+    }
+
+    /// Compute total disk usage for screenshots.
+    public func screenshotDiskUsage() throws -> Int64 {
+        let descriptor = FetchDescriptor<ScreenshotModel>()
+        let screenshots = try modelContext.fetch(descriptor)
+        var totalBytes: Int64 = 0
+        for screenshot in screenshots {
+            if let attrs = try? FileManager.default.attributesOfItem(atPath: screenshot.filePath),
+               let size = attrs[.size] as? Int64 {
+                totalBytes += size
+            }
+        }
+        return totalBytes
     }
 
     /// Get total note count.
