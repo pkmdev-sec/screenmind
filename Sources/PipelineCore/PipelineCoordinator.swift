@@ -16,6 +16,7 @@ public actor PipelineCoordinator {
     private var lastNoteApp: String?
     private var lastNoteTitle: String?
     private var recentWordSets: [(hash: UInt64, words: Set<String>)] = []
+    private var frameSkipCounter: UInt64 = 0
 
     private let captureConfig: CaptureConfiguration
     private let captureActor: ScreenCaptureActor
@@ -135,10 +136,16 @@ public actor PipelineCoordinator {
     // MARK: - Private Pipeline
 
     private func processFrame(_ frame: CapturedFrame) async {
-        // Stage 0a: Battery check — skip processing on low battery
+        // Stage 0a: Battery check — reduce capture rate on low battery, but don't block entirely.
+        // Users on low battery still expect SOME captures, just less frequently.
         if await powerMonitor.shouldPauseForBattery() {
-            SMLogger.pipeline.debug("Low battery — skipping frame")
-            return
+            // On low battery: only process every 4th frame (effectively 20s intervals instead of 5s)
+            if frameSkipCounter % 4 != 0 {
+                frameSkipCounter += 1
+                return
+            }
+            frameSkipCounter += 1
+            SMLogger.pipeline.debug("Low battery — processing at reduced rate")
         }
 
         // Stage 0b: Excluded apps filter
@@ -153,11 +160,11 @@ public actor PipelineCoordinator {
             return // Filtered — no significant change
         }
 
-        // Stage 1b: Skip idle screens — don't waste OCR/AI when user is inactive
-        if await !activityMonitor.isUserActive {
-            SMLogger.pipeline.debug("User idle — skipping OCR/AI")
-            return
-        }
+        // Stage 1b: Idle awareness.
+        // When user is idle, we still process frames that passed change detection
+        // (the screen actually changed). We only skip if change detection ALSO shows
+        // the screen is static (significantFrame already filters for that).
+        // This ensures idle captures work as intended by the "when idle" setting.
 
         SMLogger.pipeline.info("Frame passed detection — app=\(frame.appName, privacy: .public)")
 

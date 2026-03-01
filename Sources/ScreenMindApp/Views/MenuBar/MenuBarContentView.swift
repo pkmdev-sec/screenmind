@@ -220,6 +220,9 @@ struct MenuBarContentView: View {
         if let error = appState.configurationError { return error }
         if !appState.isMonitoring { return "Stopped" }
         if appState.isPaused { return "Paused" }
+        if !appState.pipelineStatus.isEmpty {
+            return "Monitoring — \(appState.pipelineStatus)"
+        }
         return "Monitoring"
     }
 }

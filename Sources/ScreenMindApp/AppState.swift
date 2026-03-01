@@ -20,6 +20,7 @@ public final class AppState {
     public var currentApp: String = ""
     public var permissionGranted = false
     public var configurationError: String?
+    public var pipelineStatus: String = ""
 
     private var pipeline: PipelineCoordinator?
     private var retryTask: Task<Void, Never>?
@@ -50,7 +51,14 @@ public final class AppState {
         let excludedAppsString = UserDefaults.standard.string(forKey: "excludedApps") ?? ""
         let excludedBundleIDs = Set(excludedAppsString.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) })
 
-        let captureConfig = CaptureConfiguration(excludedBundleIDs: excludedBundleIDs)
+        // Read user-configured capture intervals from Settings
+        let activeInterval = UserDefaults.standard.double(forKey: "captureActiveInterval")
+        let idleInterval = UserDefaults.standard.double(forKey: "captureIdleInterval")
+        let captureConfig = CaptureConfiguration(
+            activeInterval: activeInterval > 0 ? activeInterval : AppConstants.Capture.activeInterval,
+            idleInterval: idleInterval > 0 ? idleInterval : AppConstants.Capture.idleInterval,
+            excludedBundleIDs: excludedBundleIDs
+        )
         self.pipeline = PipelineCoordinator(
             captureConfig: captureConfig,
             aiProvider: provider,
@@ -90,17 +98,22 @@ public final class AppState {
         isPaused = false
         configurationError = nil
         permissionGranted = true
+        pipelineStatus = "Starting..."
         SMLogger.ui.info("Monitoring started")
 
         retryTask = Task {
             do {
                 try await pipeline?.start()
+                await MainActor.run { self.pipelineStatus = "Capturing" }
                 SMLogger.ui.info("Pipeline running")
             } catch {
                 let msg = String(describing: error)
                 SMLogger.ui.error("Pipeline start failed: \(msg, privacy: .public)")
-                configurationError = "Pipeline error: \(msg)"
-                isMonitoring = false
+                await MainActor.run {
+                    self.configurationError = "Pipeline error: \(msg)"
+                    self.isMonitoring = false
+                    self.pipelineStatus = ""
+                }
             }
         }
     }
