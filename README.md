@@ -42,7 +42,7 @@ No manual screenshots. No copy-pasting into notes. No "I'll bookmark this later"
 It just... remembers. So you can focus on the work instead of worrying about losing context.
 
 <p align="center">
-  <img src="assets/logo-dark.svg" width="500" alt="ScreenMind — Screen Memory" />
+  <img src="assets/icon-1024.png" width="160" alt="ScreenMind" />
 </p>
 
 ## How It Works
