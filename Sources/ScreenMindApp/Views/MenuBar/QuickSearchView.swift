@@ -153,6 +153,7 @@ struct QuickSearchView: View {
     }
 
     private func openNotesBrowser(for note: NoteModel) {
+        NSApp.activate(ignoringOtherApps: true)
         openWindow(id: "notes-browser")
     }
 

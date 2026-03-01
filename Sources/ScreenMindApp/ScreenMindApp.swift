@@ -118,12 +118,14 @@ struct ScreenMindApp: App {
                         case .togglePause:
                             state.togglePause()
                         case .openNotesBrowser:
+                            NSApp.activate(ignoringOtherApps: true)
                             if let window = NSApp.windows.first(where: { $0.identifier?.rawValue == "notes-browser" }) {
                                 window.makeKeyAndOrderFront(nil)
                             } else {
                                 NSApp.sendAction(Selector(("openWindow:")), to: nil, from: "notes-browser")
                             }
                         case .openTimeline:
+                            NSApp.activate(ignoringOtherApps: true)
                             if let window = NSApp.windows.first(where: { $0.identifier?.rawValue == "timeline" }) {
                                 window.makeKeyAndOrderFront(nil)
                             } else {

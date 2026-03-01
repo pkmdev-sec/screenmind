@@ -33,6 +33,7 @@ struct RecentNotesListView: View {
             } else {
                 ForEach(displayNotes) { note in
                     Button {
+                        NSApp.activate(ignoringOtherApps: true)
                         openWindow(id: "notes-browser")
                     } label: {
                         HStack(spacing: 8) {

@@ -94,7 +94,7 @@ struct MenuBarContentView: View {
             // Action buttons
             HStack(spacing: 0) {
                 Button {
-                    openWindow(id: "notes-browser")
+                    openWindowFront(id: "notes-browser")
                 } label: {
                     HStack {
                         Label("Browse Notes", systemImage: "rectangle.grid.1x2")
@@ -113,7 +113,7 @@ struct MenuBarContentView: View {
                 .buttonStyle(.plain)
 
                 Button {
-                    openWindow(id: "timeline")
+                    openWindowFront(id: "timeline")
                 } label: {
                     HStack {
                         Label("Timeline", systemImage: "clock.arrow.trianglehead.counterclockwise.rotate.90")
@@ -197,7 +197,7 @@ struct MenuBarContentView: View {
             // Bottom actions
             VStack(spacing: 0) {
                 Button {
-                    openWindow(id: "settings")
+                    openWindowFront(id: "settings")
                 } label: {
                     HStack {
                         Label("Settings…", systemImage: "gear")
@@ -249,7 +249,7 @@ struct MenuBarContentView: View {
         .task {
             appState.configure(modelContainer: modelContainer)
             if !hasCompletedOnboarding {
-                openWindow(id: "onboarding")
+                openWindowFront(id: "onboarding")
             }
         }
     }
@@ -259,6 +259,13 @@ struct MenuBarContentView: View {
         if !appState.isMonitoring { return .red }
         if appState.isPaused { return .yellow }
         return .green
+    }
+
+    /// Open a window and bring the app to the foreground.
+    /// Menu bar apps don't auto-activate, so windows open behind the current app without this.
+    private func openWindowFront(id: String) {
+        NSApp.activate(ignoringOtherApps: true)
+        openWindow(id: id)
     }
 
     private var statusText: String {

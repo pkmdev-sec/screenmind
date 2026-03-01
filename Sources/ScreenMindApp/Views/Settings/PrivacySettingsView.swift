@@ -251,6 +251,7 @@ struct PrivacySettingsView: View {
             Section("Setup") {
                 Button {
                     hasCompletedOnboarding = false
+                    NSApp.activate(ignoringOtherApps: true)
                     openWindow(id: "onboarding")
                 } label: {
                     Label("Run Setup Wizard Again", systemImage: "arrow.counterclockwise")
