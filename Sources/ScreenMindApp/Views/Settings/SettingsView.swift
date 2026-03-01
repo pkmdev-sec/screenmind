@@ -32,9 +32,9 @@ struct SettingsView: View {
 
             PerformanceSettingsView()
                 .tabItem {
-                    Label("Performance", systemImage: "gauge.with.dots.needle.33percent")
+                    Label("Stats", systemImage: "gauge.with.dots.needle.33percent")
                 }
         }
-        .frame(width: 620, height: 600)
+        .frame(width: 700, height: 600)
     }
 }
