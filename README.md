@@ -41,10 +41,6 @@ No manual screenshots. No copy-pasting into notes. No "I'll bookmark this later"
 
 It just... remembers. So you can focus on the work instead of worrying about losing context.
 
-<p align="center">
-  <img src="assets/icon-1024.png" width="160" alt="ScreenMind" />
-</p>
-
 ## How It Works
 
 ScreenMind runs a smart 7-stage pipeline that's designed to be invisible:
