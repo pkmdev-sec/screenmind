@@ -112,10 +112,18 @@ hdiutil create -volname "$APP_NAME" \
 echo "  DMG: $DMG_OUTPUT"
 echo ""
 
-# Step 6: Cleanup staging
-echo "[6/6] Cleanup..."
+# Step 6: Install to /Applications and cleanup
+echo "[6/6] Installing to /Applications..."
+if [ -d "/Applications/$APP_NAME.app" ]; then
+    # Kill running instance before replacing
+    pkill -f "$APP_NAME.app" 2>/dev/null || true
+    sleep 1
+    rm -rf "/Applications/$APP_NAME.app"
+fi
+cp -R "$APP_BUNDLE" "/Applications/$APP_NAME.app"
+echo "  Installed: /Applications/$APP_NAME.app"
 rm -rf "$DMG_DIR"
-echo "  Done"
+echo "  Staging cleaned"
 echo ""
 
 # Summary
