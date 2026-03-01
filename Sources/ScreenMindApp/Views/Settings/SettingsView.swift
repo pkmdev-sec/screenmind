@@ -1,0 +1,30 @@
+import SwiftUI
+import Shared
+
+/// Settings window with tabbed sections — macOS native style.
+struct SettingsView: View {
+    var body: some View {
+        TabView {
+            GeneralSettingsView()
+                .tabItem {
+                    Label("General", systemImage: "gear")
+                }
+
+            CaptureSettingsView()
+                .tabItem {
+                    Label("Capture", systemImage: "camera.fill")
+                }
+
+            AISettingsView()
+                .tabItem {
+                    Label("AI", systemImage: "brain")
+                }
+
+            PrivacySettingsView()
+                .tabItem {
+                    Label("Privacy", systemImage: "lock.shield.fill")
+                }
+        }
+        .frame(width: 540, height: 460)
+    }
+}
