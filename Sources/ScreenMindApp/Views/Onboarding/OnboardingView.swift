@@ -127,7 +127,7 @@ struct OnboardingView: View {
             Text("Screen Recording Permission")
                 .font(.system(size: 20, weight: .bold))
 
-            Text("ScreenMind needs screen recording access to capture what's on your screen. Your data stays local — only OCR text is sent to Claude AI for note generation.")
+            Text("ScreenMind needs screen recording access to capture what's on your screen. Your data stays local — only extracted text is sent for note generation.")
                 .font(.system(size: 13))
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -155,10 +155,10 @@ struct OnboardingView: View {
                 .font(.system(size: 48))
                 .foregroundStyle(.purple)
 
-            Text("Claude AI Setup")
+            Text("API Key Setup")
                 .font(.system(size: 20, weight: .bold))
 
-            Text("Enter your Anthropic API key to enable AI-powered note generation. You can get one at console.anthropic.com.")
+            Text("Enter your API key to enable intelligent note generation. You can get one at console.anthropic.com.")
                 .font(.system(size: 13))
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)

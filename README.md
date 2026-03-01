@@ -5,7 +5,7 @@
 <h1 align="center">ScreenMind</h1>
 
 <p align="center">
-  <strong>Your AI-powered second brain that watches your screen so you don't have to remember everything.</strong>
+  <strong>Your second brain that watches your screen so you don't have to remember everything.</strong>
 </p>
 
 <p align="center">
@@ -18,7 +18,6 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/platform-macOS%2014%2B-blue?style=flat-square&logo=apple" alt="macOS 14+" />
-  <img src="https://img.shields.io/badge/AI-Claude%20Sonnet-purple?style=flat-square&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxjaXJjbGUgY3g9IjEyIiBjeT0iMTIiIHI9IjEwIi8+PC9zdmc+" alt="Claude AI" />
   <img src="https://img.shields.io/badge/swift-5.10-orange?style=flat-square&logo=swift" alt="Swift 5.10" />
   <img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="MIT License" />
   <img src="https://img.shields.io/badge/obsidian-compatible-7C3AED?style=flat-square" alt="Obsidian Compatible" />
@@ -43,7 +42,7 @@ No manual screenshots. No copy-pasting into notes. No "I'll bookmark this later"
 It just... remembers. So you can focus on the work instead of worrying about losing context.
 
 <p align="center">
-  <img src="assets/logo-dark.svg" width="500" alt="ScreenMind — AI Screen Memory" />
+  <img src="assets/logo-dark.svg" width="500" alt="ScreenMind — Screen Memory" />
 </p>
 
 ## How It Works
@@ -51,18 +50,18 @@ It just... remembers. So you can focus on the work instead of worrying about los
 ScreenMind runs a smart 7-stage pipeline that's designed to be invisible:
 
 ```
-Screen Capture → Change Detection → OCR → Content Dedup → AI Analysis → Storage → Obsidian Export
+Screen Capture → Change Detection → OCR → Content Dedup → Analysis → Storage → Obsidian Export
 ```
 
 1. **Captures** your screen at smart intervals (not a video recorder — think periodic snapshots)
 2. **Detects** when something meaningful changes (ignores idle screens, repeated content)
-3. **Reads** the text on screen using Apple's native Vision OCR
+3. **Reads** the text on screen using Apple's native Vision framework
 4. **Deduplicates** aggressively — if you're staring at the same page, it won't create 50 notes about it
-5. **Analyzes** the content with Claude AI to decide: *"Is this worth remembering?"*
+5. **Analyzes** the content to decide: *"Is this worth remembering?"*
 6. **Generates** a structured note with title, summary, key details, tags, and links
 7. **Saves** to local SwiftData + exports beautiful Markdown to your Obsidian vault
 
-The AI is opinionated about quality. It skips lock screens, password dialogs, build logs, and boring system UI. It only creates notes when there's something genuinely worth remembering tomorrow.
+ScreenMind is opinionated about quality. It skips lock screens, password dialogs, build logs, and boring system UI. It only creates notes when there's something genuinely worth remembering tomorrow.
 
 ## Features
 
@@ -72,8 +71,8 @@ The AI is opinionated about quality. It skips lock screens, password dialogs, bu
 - Automatic pause on low battery
 - Excluded apps list (skip sensitive or noisy apps)
 
-**AI-Powered Notes**
-- Claude Sonnet generates structured, actionable notes
+**Intelligent Notes**
+- Generates structured, actionable notes from screen content
 - Extracts URLs, code snippets, decisions, action items, and key data points
 - Smart categorization: coding, research, meetings, communication, reading, terminal
 - Obsidian-compatible wiki-links and tags
@@ -83,11 +82,11 @@ The AI is opinionated about quality. It skips lock screens, password dialogs, bu
 - Perceptual image hashing (detects visual similarity)
 - Jaccard text similarity (fuzzy matching — catches near-duplicates)
 - Cooldown timers prevent note floods
-- AI-level skip detection for same-activity patterns
+- Content-aware skip detection for same-activity patterns
 
 **Privacy First**
 - Everything runs locally on your Mac. Your screen data never leaves your machine.
-- AI processing uses your own API key — no middleman servers
+- Processing uses your own API key — no middleman servers
 - OCR happens on-device via Apple Vision
 - Passwords, credentials, and sensitive dialogs are automatically skipped
 - Full data deletion available in one click
@@ -112,7 +111,7 @@ The AI is opinionated about quality. It skips lock screens, password dialogs, bu
 2. Drag **ScreenMind.app** to your Applications folder
 3. Launch it — you'll see a brain icon in your menu bar
 4. Grant **Screen Recording** permission when prompted
-5. Add your [Anthropic API key](https://console.anthropic.com/) in Settings
+5. Add your API key in Settings
 6. That's it. ScreenMind starts watching and noting automatically.
 
 ### Build from Source
@@ -128,9 +127,9 @@ The binary will be at `.build/release/ScreenMind`. To create a proper `.app` bun
 ## Requirements
 
 - **macOS 14.0** (Sonoma) or later
-- **Anthropic API key** — [Get one here](https://console.anthropic.com/) (Claude Sonnet usage is very affordable)
+- **API key** for the language model backend
 - **Screen Recording permission** — required to capture screen content
-- ~150MB RAM (optimized from 500MB+ in early builds)
+- ~150MB RAM
 
 ## Architecture
 
@@ -142,7 +141,7 @@ ScreenMindApp          ← Main app (SwiftUI menu bar)
   │   ├── CaptureCore       ← Screen capture via ScreenCaptureKit
   │   ├── ChangeDetection   ← Perceptual hashing (dHash) + threshold filtering
   │   ├── OCRProcessing     ← Apple Vision text recognition
-  │   ├── AIProcessing      ← Claude API client + response parsing
+  │   ├── AIProcessing      ← LLM client + response parsing
   │   ├── StorageCore       ← SwiftData persistence + Obsidian Markdown export
   │   └── SystemIntegration ← Keyboard shortcuts, Spotlight, notifications, power monitoring
   └── Shared           ← Constants, logging, keychain, utilities
@@ -160,7 +159,7 @@ All settings are accessible from the menu bar → Settings:
 | Note Cooldown | 60s | Minimum time between notes |
 | Obsidian Vault | `~/Desktop/pkmdev-notes` | Where Markdown notes are exported |
 | Excluded Apps | *(none)* | Bundle IDs to skip (comma-separated) |
-| API Key | *(required)* | Your Anthropic API key |
+| API Key | *(required)* | Your language model API key |
 
 ## Privacy
 
@@ -168,8 +167,8 @@ We take your screen data seriously:
 
 - **No cloud storage.** Notes live in SwiftData on your Mac and optionally in your local Obsidian vault.
 - **No telemetry.** We don't collect usage data, analytics, or crash reports.
-- **Your API key, your calls.** AI requests go directly from your Mac to Anthropic's API. We never see your data.
-- **Automatic credential skipping.** The AI is instructed to never capture passwords, login dialogs, or sensitive information.
+- **Your API key, your calls.** Requests go directly from your Mac to the API. We never see your data.
+- **Automatic credential skipping.** Sensitive content like passwords and login dialogs is never captured.
 - **One-click delete.** Settings → Privacy → Delete All Data removes everything instantly.
 
 ## Contributing
@@ -183,7 +182,7 @@ ScreenMind is open source and we'd love your help! Here's how:
 5. **Open** a Pull Request
 
 Some ideas for contributions:
-- Support for additional AI providers (Ollama, OpenAI, local models)
+- Support for additional model providers (Ollama, OpenAI, local models)
 - Enhanced Obsidian templates and formatting
 - Calendar integration for meeting detection
 - Browser extension for richer web context

@@ -82,9 +82,9 @@ struct AISettingsView: View {
                 // Model info card
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Claude Sonnet 4.6")
+                        Text("Language Model")
                             .font(.system(size: 13, weight: .semibold))
-                        Text("claude-sonnet-4-6 via Anthropic API")
+                        Text("Sonnet 4.6")
                             .font(.system(size: 11, design: .monospaced))
                             .foregroundStyle(.secondary)
                     }

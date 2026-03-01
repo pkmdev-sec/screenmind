@@ -41,5 +41,5 @@
 
   <!-- Product name -->
   <text x="210" y="120" font-family="-apple-system, SF Pro Display, Helvetica Neue, sans-serif" font-size="72" font-weight="700" fill="url(#textGrad)">ScreenMind</text>
-  <text x="213" y="152" font-family="-apple-system, SF Pro Display, Helvetica Neue, sans-serif" font-size="18" font-weight="400" fill="#94A3B8" letter-spacing="4">AI-POWERED SCREEN MEMORY</text>
+  <text x="213" y="152" font-family="-apple-system, SF Pro Display, Helvetica Neue, sans-serif" font-size="18" font-weight="400" fill="#94A3B8" letter-spacing="4">INTELLIGENT SCREEN MEMORY</text>
 </svg>

@@ -1,7 +1,7 @@
 import Foundation
 import Shared
 
-/// Anthropic Claude Sonnet 4.6 API client for note generation.
+/// Language model API client for note generation.
 public struct ClaudeProvider: AIProvider, Sendable {
     private let apiKey: String
 

@@ -18,7 +18,7 @@ public enum AppConstants {
         public static let rollingWindowSize = 3
     }
 
-    // MARK: - AI (Claude Sonnet 4.6)
+    // MARK: - AI
     public enum AI {
         public static let apiBaseURL = "https://api.anthropic.com/v1/messages"
         public static let modelName = "claude-sonnet-4-6"

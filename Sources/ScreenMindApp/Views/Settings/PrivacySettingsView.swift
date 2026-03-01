@@ -48,7 +48,7 @@ struct PrivacySettingsView: View {
                     Image(systemName: "info.circle")
                         .foregroundStyle(.blue)
                         .font(.system(size: 12))
-                    Text("All data is stored locally on your Mac. Nothing is sent to the cloud except OCR text to Claude for note generation.")
+                    Text("All data is stored locally on your Mac. Only extracted text is sent to the language model for note generation.")
                         .font(.system(size: 11))
                         .foregroundStyle(.secondary)
                 }

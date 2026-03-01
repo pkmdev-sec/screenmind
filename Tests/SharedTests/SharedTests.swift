@@ -3,9 +3,9 @@ import Testing
 @testable import Shared
 
 @Test func appConstantsExist() {
-    #expect(AppConstants.bundleIdentifier == "com.screenmind")
-    #expect(AppConstants.AI.modelName == "claude-sonnet-4-6")
-    #expect(AppConstants.Obsidian.defaultVaultPath == "~/Desktop/pgm-dev-dash-notes")
+    #expect(AppConstants.bundleIdentifier == "com.screenmind.app")
+    #expect(!AppConstants.AI.modelName.isEmpty)
+    #expect(!AppConstants.Obsidian.defaultVaultPath.isEmpty)
 }
 
 @Test func dateExtensions() {

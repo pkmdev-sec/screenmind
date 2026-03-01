@@ -1,7 +1,7 @@
 import Foundation
 import Shared
 
-/// Parses Claude API responses into GeneratedNote structs.
+/// Parses API responses into GeneratedNote structs.
 public enum ClaudeResponseParser {
 
     /// Parse the raw API response data into a GeneratedNote.
