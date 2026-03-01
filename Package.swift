@@ -56,9 +56,17 @@ let package = Package(
                 "OCRProcessing",
                 "AIProcessing",
                 "StorageCore",
-                "SystemIntegration"
+                "SystemIntegration",
+                "AudioCore"
             ],
             path: "Sources/PipelineCore"
+        ),
+
+        // MARK: - Audio Intelligence
+        .target(
+            name: "AudioCore",
+            dependencies: ["Shared"],
+            path: "Sources/AudioCore"
         ),
 
         // MARK: - System Integration
@@ -79,7 +87,8 @@ let package = Package(
                 "AIProcessing",
                 "StorageCore",
                 "PipelineCore",
-                "SystemIntegration"
+                "SystemIntegration",
+                "AudioCore"
             ],
             path: "Sources/ScreenMindApp"
         ),

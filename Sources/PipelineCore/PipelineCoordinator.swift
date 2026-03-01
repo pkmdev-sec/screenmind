@@ -6,6 +6,7 @@ import OCRProcessing
 import AIProcessing
 import StorageCore
 import SystemIntegration
+import AudioCore
 import SwiftData
 
 /// Orchestrates the full capture → detection → OCR → AI → storage pipeline.
@@ -32,6 +33,7 @@ public actor PipelineCoordinator {
     private let auditLogger = AuditLogger()
     private let resourceMonitor = ResourceMonitor.shared
     private let ocrCache = OCRCache()
+    private let meetingDetector = MeetingDetectionActor()
     private let onNoteSaved: (@Sendable (String, String) -> Void)?
 
     public init(
@@ -70,6 +72,11 @@ public actor PipelineCoordinator {
         }
 
         await resourceMonitor.resetSession()
+
+        // Request calendar access for meeting detection (non-blocking)
+        if UserDefaults.standard.object(forKey: "audioMeetingDetection") as? Bool ?? true {
+            _ = await meetingDetector.requestAccess()
+        }
 
         // Set up the frame stream BEFORE starting capture so no frames are lost
         let frameStream = await captureActor.frames()

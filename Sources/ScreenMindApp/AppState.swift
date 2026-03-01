@@ -8,6 +8,7 @@ import AIProcessing
 import CaptureCore
 import StorageCore
 import SystemIntegration
+import AudioCore
 
 /// Central observable state for the ScreenMind app.
 @MainActor
@@ -23,10 +24,13 @@ public final class AppState {
     public var configurationError: String?
     public var pipelineStatus: String = ""
     public var apiServerRunning = false
+    public var isRecordingVoiceMemo = false
+    private var isTogglingVoiceMemo = false
 
     private var pipeline: PipelineCoordinator?
     private var retryTask: Task<Void, Never>?
     private var storedModelContainer: ModelContainer?
+    private var voiceMemoRecorder: VoiceMemoRecorder?
 
     public init() {}
 
@@ -228,6 +232,65 @@ public final class AppState {
                 "error": "Not found",
                 "endpoints": ["/api/notes", "/api/notes/today", "/api/stats", "/api/apps", "/api/health"]
             ])
+        }
+    }
+
+    /// Toggle voice memo recording. First call starts, second call stops and transcribes.
+    public func toggleVoiceMemo() {
+        // Re-entry guard: prevent rapid toggle causing concurrent recorders
+        guard !isTogglingVoiceMemo else { return }
+        isTogglingVoiceMemo = true
+        defer { isTogglingVoiceMemo = false }
+
+        if isRecordingVoiceMemo {
+            // Stop recording and create note
+            isRecordingVoiceMemo = false
+            pipelineStatus = "Transcribing..."
+            Task {
+                guard let memo = await voiceMemoRecorder?.stopRecording() else {
+                    await MainActor.run { self.pipelineStatus = "Capturing" }
+                    return
+                }
+                // Save voice memo as a note via the storage actor
+                if let container = storedModelContainer {
+                    let storage = StorageActor(modelContainer: container)
+                    let generatedNote = AIProcessing.GeneratedNote(
+                        title: "Voice Memo: \(String(memo.text.prefix(40)))",
+                        summary: memo.text,
+                        details: "",
+                        category: .other,
+                        tags: ["voice-memo"],
+                        confidence: 0.9,
+                        skip: false,
+                        obsidianLinks: []
+                    )
+                    _ = try? await storage.saveNote(
+                        generatedNote,
+                        appName: "Voice Memo",
+                        windowTitle: nil,
+                        screenshotPath: nil,
+                        hash: 0,
+                        imageWidth: 0,
+                        imageHeight: 0,
+                        timestamp: memo.createdAt,
+                        redactionCount: 0
+                    )
+                    await MainActor.run {
+                        self.noteCountToday += 1
+                        self.pipelineStatus = "Capturing"
+                    }
+                }
+                SMLogger.ui.info("Voice memo saved: \(memo.text.prefix(50))")
+            }
+        } else {
+            // Start recording
+            isRecordingVoiceMemo = true
+            pipelineStatus = "Recording voice memo..."
+            let language = UserDefaults.standard.string(forKey: "audioLanguage") ?? "en-US"
+            voiceMemoRecorder = VoiceMemoRecorder(language: language)
+            Task {
+                try? await voiceMemoRecorder?.startRecording()
+            }
         }
     }
 

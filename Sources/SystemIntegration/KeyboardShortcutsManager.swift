@@ -18,6 +18,7 @@ public final class KeyboardShortcutsManager: @unchecked Sendable {
         case openNotesBrowser
         case openTimeline
         case manualCapture
+        case voiceMemo
     }
 
     private var eventHandler: EventHandlerRef?
@@ -53,6 +54,10 @@ public final class KeyboardShortcutsManager: @unchecked Sendable {
         let hotKeyID5 = EventHotKeyID(signature: fourCharCode("SMn5"), id: 5)
         RegisterEventHotKey(UInt32(kVK_ANSI_C), captureModifiers, hotKeyID5, GetEventDispatcherTarget(), 0, &hotKeyRef)
 
+        // ⌘⌥⇧V — Voice memo (keycode 9 = V)
+        let hotKeyID6 = EventHotKeyID(signature: fourCharCode("SMn6"), id: 6)
+        RegisterEventHotKey(UInt32(kVK_ANSI_V), captureModifiers, hotKeyID6, GetEventDispatcherTarget(), 0, &hotKeyRef)
+
         // Install event handler
         var eventType = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
 
@@ -70,6 +75,7 @@ public final class KeyboardShortcutsManager: @unchecked Sendable {
             case 3: manager.actionCallback?(.openNotesBrowser)
             case 4: manager.actionCallback?(.openTimeline)
             case 5: manager.actionCallback?(.manualCapture)
+            case 6: manager.actionCallback?(.voiceMemo)
             default: break
             }
 

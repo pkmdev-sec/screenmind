@@ -133,6 +133,8 @@ struct ScreenMindApp: App {
                             }
                         case .manualCapture:
                             state.manualCapture()
+                        case .voiceMemo:
+                            state.toggleVoiceMemo()
                         }
                     }
                 }

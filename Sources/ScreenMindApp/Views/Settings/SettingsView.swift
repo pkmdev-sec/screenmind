@@ -15,6 +15,11 @@ struct SettingsView: View {
                     Label("Capture", systemImage: "camera.fill")
                 }
 
+            AudioSettingsView()
+                .tabItem {
+                    Label("Audio", systemImage: "waveform")
+                }
+
             AISettingsView()
                 .tabItem {
                     Label("AI", systemImage: "brain")
@@ -35,6 +40,6 @@ struct SettingsView: View {
                     Label("Stats", systemImage: "gauge.with.dots.needle.33percent")
                 }
         }
-        .frame(width: 700, height: 600)
+        .frame(width: 740, height: 600)
     }
 }

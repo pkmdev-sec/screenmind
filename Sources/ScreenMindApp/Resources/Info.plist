@@ -28,6 +28,12 @@
     <string>Copyright © 2026 ScreenMind. All rights reserved.</string>
     <key>NSScreenCaptureUsageDescription</key>
     <string>ScreenMind needs screen recording access to capture your screen, extract text via OCR, and generate AI-powered notes about what you're working on.</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>ScreenMind uses your microphone for voice memos and meeting transcription. Audio is transcribed on-device and never sent to the cloud.</string>
+    <key>NSSpeechRecognitionUsageDescription</key>
+    <string>ScreenMind uses on-device speech recognition to transcribe voice memos and meetings into searchable notes.</string>
+    <key>NSCalendarsUsageDescription</key>
+    <string>ScreenMind reads your calendar to detect meetings and enrich notes with meeting titles and attendees.</string>
     <key>CFBundleIconFile</key>
     <string>AppIcon</string>
     <key>NSHighResolutionCapable</key>
