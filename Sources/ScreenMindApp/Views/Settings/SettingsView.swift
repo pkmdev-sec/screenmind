@@ -29,7 +29,12 @@ struct SettingsView: View {
                 .tabItem {
                     Label("Privacy", systemImage: "lock.shield.fill")
                 }
+
+            PerformanceSettingsView()
+                .tabItem {
+                    Label("Performance", systemImage: "gauge.with.dots.needle.33percent")
+                }
         }
-        .frame(width: 600, height: 580)
+        .frame(width: 620, height: 600)
     }
 }

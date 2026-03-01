@@ -30,6 +30,8 @@ public actor PipelineCoordinator {
     private let spotlightIndexer = SpotlightIndexer()
     private let errorBoundary = ErrorBoundary()
     private let auditLogger = AuditLogger()
+    private let resourceMonitor = ResourceMonitor.shared
+    private let ocrCache = OCRCache()
     private let onNoteSaved: (@Sendable (String, String) -> Void)?
 
     public init(
@@ -59,6 +61,15 @@ public actor PipelineCoordinator {
         isRunning = true
 
         SMLogger.pipeline.info("Pipeline starting...")
+
+        // Enforce screenshot quota on startup to handle cases where quota was
+        // exceeded during previous sessions or short sessions that didn't hit the periodic check
+        let deleted = screenshotManager.enforceQuota()
+        if deleted > 0 {
+            SMLogger.pipeline.info("Startup quota cleanup: deleted \(deleted) screenshots")
+        }
+
+        await resourceMonitor.resetSession()
 
         // Set up the frame stream BEFORE starting capture so no frames are lost
         let frameStream = await captureActor.frames()
@@ -136,6 +147,8 @@ public actor PipelineCoordinator {
     // MARK: - Private Pipeline
 
     private func processFrame(_ frame: CapturedFrame) async {
+        await resourceMonitor.recordFrameCaptured()
+
         // Stage 0a: Battery check — reduce capture rate on low battery, but don't block entirely.
         // Users on low battery still expect SOME captures, just less frequently.
         if await powerMonitor.shouldPauseForBattery() {
@@ -157,6 +170,7 @@ public actor PipelineCoordinator {
 
         // Stage 1: Change Detection
         guard let significantFrame = await changeDetector.process(frame) else {
+            await resourceMonitor.recordFrameFiltered()
             return // Filtered — no significant change
         }
 
@@ -177,10 +191,30 @@ public actor PipelineCoordinator {
             }
         }
 
-        // Stage 3: OCR
-        guard let recognizedText = await ocrProcessor.process(significantFrame) else {
-            SMLogger.pipeline.info("OCR returned no text")
-            return
+        // Stage 3: OCR (with cache)
+        let recognizedText: RecognizedText
+
+        // Check OCR cache first — avoid re-processing visually similar frames
+        if let cached = await ocrCache.get(hash: significantFrame.hash) {
+            recognizedText = RecognizedText(
+                text: cached.text,
+                averageConfidence: cached.confidence,
+                wordCount: cached.wordCount,
+                processingTime: 0,
+                appName: frame.appName,
+                windowTitle: frame.windowTitle,
+                timestamp: frame.timestamp
+            )
+            SMLogger.pipeline.debug("OCR cache hit for hash \(significantFrame.hash)")
+        } else {
+            guard let ocrResult = await ocrProcessor.process(significantFrame) else {
+                SMLogger.pipeline.info("OCR returned no text")
+                return
+            }
+            recognizedText = ocrResult
+            await resourceMonitor.recordOCRComplete(timeMs: ocrResult.processingTime * 1000)
+            // Cache the result
+            await ocrCache.put(hash: significantFrame.hash, text: ocrResult.text, confidence: ocrResult.averageConfidence, wordCount: ocrResult.wordCount)
         }
 
         let textPreview = String(recognizedText.text.prefix(80))
@@ -193,6 +227,7 @@ public actor PipelineCoordinator {
             windowTitle: frame.windowTitle
         )
         if skipResult.shouldSkip {
+            await resourceMonitor.recordNoteSkippedByRule()
             if let rule = skipResult.matchedRule {
                 await auditLogger.log(action: .skipped, appName: frame.appName, reason: "Skip rule: \(rule.name)")
             }
@@ -201,6 +236,9 @@ public actor PipelineCoordinator {
 
         // Stage 3c: Content Redaction — remove sensitive data before AI processing
         let redactionResult = ContentRedactor.redact(recognizedText.text)
+        if redactionResult.redactionCount > 0 {
+            await resourceMonitor.recordRedaction(count: redactionResult.redactionCount)
+        }
         let processedText: RecognizedText
         if redactionResult.redactionCount > 0 {
             processedText = RecognizedText(
@@ -263,6 +301,7 @@ public actor PipelineCoordinator {
         }
 
         guard let generatedNote else {
+            await resourceMonitor.recordNoteSkippedByAI()
             SMLogger.pipeline.info("AI skipped frame or failed")
             return
         }
@@ -307,6 +346,15 @@ public actor PipelineCoordinator {
                 title: generatedNote.title,
                 category: generatedNote.category.rawValue
             )
+
+            // Record stats
+            await resourceMonitor.recordNoteGenerated(aiTimeMs: 0) // AI time tracked inside AIProcessingActor
+
+            // Enforce screenshot storage quota periodically (every 10 notes)
+            let throughputStats = await resourceMonitor.currentThroughput()
+            if throughputStats.notesGenerated % 10 == 0 {
+                screenshotManager.enforceQuota()
+            }
 
             // Update tracking state
             lastNoteTimestamp = Date.now

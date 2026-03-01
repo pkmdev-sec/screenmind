@@ -55,6 +55,71 @@ public struct ScreenshotFileManager: Sendable {
         }
         return total
     }
+
+    /// Enforce storage quota by deleting oldest screenshots when over limit.
+    /// Returns the number of files deleted.
+    @discardableResult
+    public func enforceQuota(maxBytes: Int64 = AppConstants.Storage.quotaBytes) -> Int {
+        var currentUsage = totalDiskUsage()
+        guard currentUsage > maxBytes else { return 0 }
+
+        // Collect all screenshot files with creation dates
+        guard FileManager.default.fileExists(atPath: baseDirectory.path) else { return 0 }
+        var files: [(url: URL, date: Date, size: Int64)] = []
+
+        if let enumerator = FileManager.default.enumerator(
+            at: baseDirectory,
+            includingPropertiesForKeys: [.fileSizeKey, .creationDateKey]
+        ) {
+            while let url = enumerator.nextObject() as? URL {
+                guard let values = try? url.resourceValues(forKeys: [.fileSizeKey, .creationDateKey]),
+                      let size = values.fileSize,
+                      let date = values.creationDate,
+                      url.pathExtension == "jpg" || url.pathExtension == "enc" else { continue }
+                files.append((url: url, date: date, size: Int64(size)))
+            }
+        }
+
+        // Sort oldest first
+        files.sort { $0.date < $1.date }
+
+        var deleted = 0
+        for file in files {
+            guard currentUsage > maxBytes else { break }
+            do {
+                try FileManager.default.removeItem(at: file.url)
+                currentUsage -= file.size
+                deleted += 1
+            } catch {
+                SMLogger.storage.warning("Quota cleanup: failed to delete \(file.url.lastPathComponent): \(error.localizedDescription)")
+            }
+        }
+
+        if deleted > 0 {
+            SMLogger.storage.info("Quota enforcement: deleted \(deleted) screenshots, freed \(deleted > 0 ? "space" : "none")")
+        }
+
+        // Clean up empty day folders
+        cleanEmptyDayFolders()
+
+        return deleted
+    }
+
+    /// Remove empty day folders after quota cleanup.
+    private func cleanEmptyDayFolders() {
+        guard let contents = try? FileManager.default.contentsOfDirectory(
+            at: baseDirectory,
+            includingPropertiesForKeys: [.isDirectoryKey]
+        ) else { return }
+
+        for folder in contents {
+            guard (try? folder.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true else { continue }
+            let items = (try? FileManager.default.contentsOfDirectory(atPath: folder.path)) ?? []
+            if items.isEmpty {
+                try? FileManager.default.removeItem(at: folder)
+            }
+        }
+    }
 }
 
 public enum ScreenshotError: Error {
