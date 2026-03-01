@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/logo.svg" width="200" alt="ScreenMind Logo" />
+  <img src="assets/icon-1024.png" width="200" alt="ScreenMind Logo" />
 </p>
 
 <h1 align="center">ScreenMind</h1>
