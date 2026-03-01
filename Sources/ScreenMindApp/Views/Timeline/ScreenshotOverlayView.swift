@@ -12,7 +12,7 @@ struct ScreenshotOverlayView: View {
     var body: some View {
         ZStack {
             // Dimmed background
-            Color.black.opacity(0.7)
+            Color.black.opacity(0.85)
                 .ignoresSafeArea()
                 .onTapGesture { onDismiss() }
 
@@ -47,7 +47,7 @@ struct ScreenshotOverlayView: View {
                     .keyboardShortcut(.escape, modifiers: [])
                 }
                 .padding(16)
-                .background(.ultraThinMaterial.opacity(0.3))
+                .background(.ultraThinMaterial)
 
                 // Screenshot
                 if isLoading {
@@ -118,7 +118,7 @@ struct ScreenshotOverlayView: View {
                     }
                 }
                 .padding(16)
-                .background(.ultraThinMaterial.opacity(0.3))
+                .background(.ultraThinMaterial)
             }
             .clipShape(RoundedRectangle(cornerRadius: 12))
             .padding(40)

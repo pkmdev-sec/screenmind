@@ -157,6 +157,7 @@ struct ExportSettingsView: View {
                 Text(path.wrappedValue.isEmpty ? defaultPath : path.wrappedValue)
                     .font(.system(size: 10, design: .monospaced))
                     .foregroundStyle(.secondary)
+                    .frame(maxWidth: 300)
                     .lineLimit(1)
                     .truncationMode(.middle)
             }

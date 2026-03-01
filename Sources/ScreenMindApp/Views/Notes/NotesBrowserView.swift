@@ -37,7 +37,6 @@ struct NotesBrowserView: View {
             }
             .listStyle(.sidebar)
             .navigationSplitViewColumnWidth(min: 180, ideal: 200, max: 260)
-            .background(.ultraThinMaterial)
         } content: {
             // Content — Note List
             List(selection: $selectedNote) {

@@ -154,6 +154,7 @@ struct GeneralSettingsView: View {
                         RoundedRectangle(cornerRadius: 4)
                             .fill(diskUsageColor)
                             .frame(width: geo.size.width * diskUsageRatio, height: 8)
+                            .animation(.easeOut(duration: 0.6), value: diskUsageBytes)
                     }
                 }
                 .frame(height: 8)

@@ -10,6 +10,7 @@ struct QuickSearchView: View {
     @FocusState private var isSearchFocused: Bool
     @State private var selectedIndex = 0
     @Environment(\.openWindow) private var openWindow
+    @State private var hoveredResultIndex: Int?
 
     private var searchResults: [NoteModel] {
         guard !searchText.isEmpty else { return [] }
@@ -104,8 +105,12 @@ struct QuickSearchView: View {
                                     }
                                     .padding(.horizontal, 12)
                                     .padding(.vertical, 6)
-                                    .background(index == selectedIndex ? Color.accentColor.opacity(0.1) : Color.clear)
+                                    .background(
+                                        index == selectedIndex ? Color.accentColor.opacity(0.15) :
+                                        (hoveredResultIndex == index ? Color.accentColor.opacity(0.08) : Color.clear)
+                                    )
                                     .contentShape(Rectangle())
+                                    .onHover { hoveredResultIndex = $0 ? index : nil }
                                 }
                                 .buttonStyle(.plain)
 

@@ -30,6 +30,6 @@ struct SettingsView: View {
                     Label("Privacy", systemImage: "lock.shield.fill")
                 }
         }
-        .frame(width: 580, height: 560)
+        .frame(width: 600, height: 580)
     }
 }

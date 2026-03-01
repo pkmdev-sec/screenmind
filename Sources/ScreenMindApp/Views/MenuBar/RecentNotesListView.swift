@@ -8,6 +8,7 @@ struct RecentNotesListView: View {
     private var recentNotes: [NoteModel]
 
     @Environment(\.openWindow) private var openWindow
+    @State private var hoveredNoteID: UUID?
 
     private var displayNotes: [NoteModel] {
         Array(recentNotes.prefix(8))
@@ -53,6 +54,11 @@ struct RecentNotesListView: View {
                         .padding(.horizontal, 8)
                         .padding(.vertical, 5)
                         .contentShape(Rectangle())
+                        .background(
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(.quaternary.opacity(hoveredNoteID == note.id ? 0.6 : 0))
+                        )
+                        .onHover { hoveredNoteID = $0 ? note.id : nil }
                     }
                     .buttonStyle(.plain)
 

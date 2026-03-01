@@ -37,7 +37,7 @@ struct NoteDetailView: View {
                         .font(.system(size: 12, weight: .medium))
                         .padding(.horizontal, 10)
                         .padding(.vertical, 5)
-                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 6))
+                        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 6))
 
                     if let windowTitle = note.windowTitle {
                         Label(windowTitle, systemImage: "macwindow")
@@ -49,31 +49,57 @@ struct NoteDetailView: View {
 
                 // Summary
                 VStack(alignment: .leading, spacing: 6) {
-                    Label("Summary", systemImage: "text.alignleft")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(.secondary)
+                    HStack {
+                        Label("Summary", systemImage: "text.alignleft")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        Button {
+                            NSPasteboard.general.clearContents()
+                            NSPasteboard.general.setString(note.summary, forType: .string)
+                        } label: {
+                            Image(systemName: "doc.on.doc")
+                                .font(.system(size: 11))
+                                .foregroundStyle(.tertiary)
+                        }
+                        .buttonStyle(.plain)
+                        .help("Copy summary")
+                    }
 
                     Text(note.summary)
                         .font(.system(size: 14))
                         .lineSpacing(4)
                         .padding(12)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10))
+                        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10))
                 }
 
                 // Details
                 if !note.details.isEmpty {
                     VStack(alignment: .leading, spacing: 6) {
-                        Label("Details", systemImage: "list.bullet")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(.secondary)
+                        HStack {
+                            Label("Details", systemImage: "list.bullet")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(.secondary)
+                            Spacer()
+                            Button {
+                                NSPasteboard.general.clearContents()
+                                NSPasteboard.general.setString(note.details, forType: .string)
+                            } label: {
+                                Image(systemName: "doc.on.doc")
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(.tertiary)
+                            }
+                            .buttonStyle(.plain)
+                            .help("Copy details")
+                        }
 
                         Text(note.details)
                             .font(.system(size: 13))
                             .lineSpacing(3)
                             .padding(12)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10))
+                            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10))
                     }
                 }
 

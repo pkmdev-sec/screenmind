@@ -10,6 +10,7 @@ struct MenuBarContentView: View {
 
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @Environment(\.openWindow) private var openWindow
+    @State private var hoveredButton: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -22,6 +23,20 @@ struct MenuBarContentView: View {
                     Circle()
                         .fill(statusColor)
                         .frame(width: 8, height: 8)
+                        .scaleEffect(appState.isMonitoring && !appState.isPaused ? 1.3 : 1.0)
+                        .opacity(appState.isMonitoring && !appState.isPaused ? 0.7 : 1.0)
+                        .animation(
+                            appState.isMonitoring && !appState.isPaused
+                                ? .easeInOut(duration: 1.2).repeatForever(autoreverses: true)
+                                : .default,
+                            value: appState.isMonitoring
+                        )
+                        .animation(
+                            appState.isMonitoring && !appState.isPaused
+                                ? .easeInOut(duration: 1.2).repeatForever(autoreverses: true)
+                                : .default,
+                            value: appState.isPaused
+                        )
                 }
 
                 VStack(alignment: .leading, spacing: 1) {
@@ -89,6 +104,11 @@ struct MenuBarContentView: View {
                     .padding(.horizontal, 14)
                     .padding(.vertical, 6)
                     .contentShape(Rectangle())
+                    .background(
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(.quaternary.opacity(hoveredButton == "browse" ? 0.8 : 0))
+                    )
+                    .onHover { hoveredButton = $0 ? "browse" : nil }
                 }
                 .buttonStyle(.plain)
 
@@ -106,6 +126,11 @@ struct MenuBarContentView: View {
                     .padding(.horizontal, 14)
                     .padding(.vertical, 6)
                     .contentShape(Rectangle())
+                    .background(
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(.quaternary.opacity(hoveredButton == "timeline" ? 0.8 : 0))
+                    )
+                    .onHover { hoveredButton = $0 ? "timeline" : nil }
                 }
                 .buttonStyle(.plain)
             }
@@ -133,6 +158,11 @@ struct MenuBarContentView: View {
                     .padding(.horizontal, 14)
                     .padding(.vertical, 6)
                     .contentShape(Rectangle())
+                    .background(
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(.quaternary.opacity(hoveredButton == "toggle" ? 0.8 : 0))
+                    )
+                    .onHover { hoveredButton = $0 ? "toggle" : nil }
                 }
                 .buttonStyle(.plain)
 
@@ -151,6 +181,11 @@ struct MenuBarContentView: View {
                         .padding(.horizontal, 14)
                         .padding(.vertical, 6)
                         .contentShape(Rectangle())
+                        .background(
+                            RoundedRectangle(cornerRadius: 6)
+                                .fill(.quaternary.opacity(hoveredButton == "pause" ? 0.8 : 0))
+                        )
+                        .onHover { hoveredButton = $0 ? "pause" : nil }
                     }
                     .buttonStyle(.plain)
                 }
@@ -175,6 +210,11 @@ struct MenuBarContentView: View {
                     .padding(.horizontal, 14)
                     .padding(.vertical, 6)
                     .contentShape(Rectangle())
+                    .background(
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(.quaternary.opacity(hoveredButton == "settings" ? 0.8 : 0))
+                    )
+                    .onHover { hoveredButton = $0 ? "settings" : nil }
                 }
                 .buttonStyle(.plain)
                 .keyboardShortcut(",", modifiers: .command)
@@ -193,6 +233,11 @@ struct MenuBarContentView: View {
                     .padding(.horizontal, 14)
                     .padding(.vertical, 6)
                     .contentShape(Rectangle())
+                    .background(
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(.quaternary.opacity(hoveredButton == "quit" ? 0.8 : 0))
+                    )
+                    .onHover { hoveredButton = $0 ? "quit" : nil }
                 }
                 .buttonStyle(.plain)
                 .keyboardShortcut("q", modifiers: .command)

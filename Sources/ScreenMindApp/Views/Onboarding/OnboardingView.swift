@@ -12,6 +12,7 @@ struct OnboardingView: View {
     @State private var newExcludedApp = ""
     @State private var apiTestStatus: APITestStatus = .idle
     @State private var vaultStatus: VaultStatus = .unchecked
+    @State private var showSkipWarning = false
     @Environment(\.dismiss) private var dismiss
 
     private let totalSteps = 6
@@ -37,7 +38,7 @@ struct OnboardingView: View {
                 ForEach(0..<totalSteps, id: \.self) { step in
                     Circle()
                         .fill(step <= currentStep ? Color.accentColor : Color.gray.opacity(0.3))
-                        .frame(width: 8, height: 8)
+                        .frame(width: 10, height: 10)
                         .scaleEffect(step == currentStep ? 1.2 : 1.0)
                         .animation(.spring(response: 0.3), value: currentStep)
                 }
@@ -73,7 +74,22 @@ struct OnboardingView: View {
 
             // Navigation buttons
             HStack {
-                if currentStep > 0 {
+                if currentStep == 0 {
+                    Button("Skip Setup") {
+                        showSkipWarning = true
+                    }
+                    .controlSize(.large)
+                    .foregroundStyle(.secondary)
+                    .alert("Skip Setup?", isPresented: $showSkipWarning) {
+                        Button("Cancel", role: .cancel) {}
+                        Button("Skip Anyway") {
+                            hasCompletedOnboarding = true
+                            dismiss()
+                        }
+                    } message: {
+                        Text("You'll need to configure the API key and vault path in Settings before ScreenMind can generate notes.")
+                    }
+                } else if currentStep > 0 {
                     Button("Back") {
                         withAnimation(.easeInOut(duration: 0.3)) {
                             currentStep -= 1
@@ -116,7 +132,7 @@ struct OnboardingView: View {
         .frame(width: 520, height: 480)
         .background {
             LinearGradient(
-                colors: [.blue.opacity(0.05), .purple.opacity(0.05)],
+                colors: [.blue.opacity(0.08), .purple.opacity(0.08)],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )

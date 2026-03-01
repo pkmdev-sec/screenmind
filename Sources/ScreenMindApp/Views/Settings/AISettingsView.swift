@@ -66,7 +66,7 @@ struct AISettingsView: View {
                     }
                 }
                 .padding(6)
-                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 8))
+                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
             }
 
             // API Key (if required)

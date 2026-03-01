@@ -14,7 +14,7 @@ struct CategoryBadge: View {
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 3)
-        .background(categoryColor.opacity(0.15))
+        .background(categoryColor.opacity(0.2))
         .foregroundStyle(categoryColor)
         .clipShape(Capsule())
     }

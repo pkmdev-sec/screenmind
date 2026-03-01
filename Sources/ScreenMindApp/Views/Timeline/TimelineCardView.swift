@@ -68,12 +68,11 @@ struct TimelineCardView: View {
             }
             .padding(10)
         }
-        .background(.background)
-        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10))
         .overlay(
             RoundedRectangle(cornerRadius: 10)
-                .stroke(isSelected ? Color.accentColor : Color.clear, lineWidth: 2)
+                .strokeBorder(isSelected ? Color.accentColor : Color.clear, lineWidth: 2)
         )
-        .shadow(color: .black.opacity(0.08), radius: 4, y: 2)
+        .shadow(color: .black.opacity(0.1), radius: 6, y: 3)
     }
 }

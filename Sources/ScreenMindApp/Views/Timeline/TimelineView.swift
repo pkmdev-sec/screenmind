@@ -15,6 +15,7 @@ struct TimelineView: View {
     @State private var selectedNote: NoteModel?
     @State private var overlayNote: NoteModel?
     @State private var thumbnailCache = ThumbnailCache.shared
+    @State private var hoveredCardID: UUID?
 
     private let categories = ["All", "coding", "research", "meeting", "communication", "reading", "terminal", "other"]
     private let gridColumns = [GridItem(.adaptive(minimum: 220, maximum: 300), spacing: 12)]
@@ -55,7 +56,7 @@ struct TimelineView: View {
                 toolbar
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
-                    .background(.bar)
+                    .background(.ultraThinMaterial)
 
                 Divider()
 
@@ -114,7 +115,7 @@ struct TimelineView: View {
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
-            .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 8))
+            .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 10))
             .frame(maxWidth: 300)
             .onChange(of: searchText) { _, newValue in
                 searchDebounceTask?.cancel()
@@ -133,6 +134,7 @@ struct TimelineView: View {
                 }
             }
             .pickerStyle(.segmented)
+            .labelsHidden()
             .frame(width: 300)
 
             Spacer()
@@ -143,6 +145,7 @@ struct TimelineView: View {
                     Text(cat == "All" ? "All Categories" : cat.capitalized).tag(cat)
                 }
             }
+            .labelsHidden()
             .frame(width: 150)
 
             // View mode toggle
@@ -152,7 +155,8 @@ struct TimelineView: View {
                 }
             }
             .pickerStyle(.segmented)
-            .frame(width: 80)
+            .labelsHidden()
+            .frame(width: 100)
         }
     }
 
@@ -167,6 +171,11 @@ struct TimelineView: View {
                         thumbnail: loadThumbnail(for: note),
                         isSelected: selectedNote?.id == note.id
                     )
+                    .scaleEffect(hoveredCardID == note.id ? 1.02 : 1.0)
+                    .animation(.easeOut(duration: 0.15), value: hoveredCardID)
+                    .onHover { isHovered in
+                        hoveredCardID = isHovered ? note.id : nil
+                    }
                     .onTapGesture {
                         selectedNote = note
                     }
@@ -289,7 +298,7 @@ struct TimelineView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 6)
-        .background(.bar)
+        .background(.ultraThinMaterial)
     }
 
     // MARK: - Context Menu

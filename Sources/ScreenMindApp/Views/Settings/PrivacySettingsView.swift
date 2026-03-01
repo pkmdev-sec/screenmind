@@ -78,6 +78,7 @@ struct PrivacySettingsView: View {
                             .font(.system(size: 11))
                             .foregroundStyle(.secondary)
                     }
+                    .padding(.top, 2)
 
                     // Custom patterns
                     DisclosureGroup("Custom Redaction Patterns (\(customPatterns.count))") {
@@ -204,6 +205,7 @@ struct PrivacySettingsView: View {
                         .font(.system(size: 11))
                         .foregroundStyle(.secondary)
                 }
+                .padding(.top, 2)
             }
 
             // Audit Log

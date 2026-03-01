@@ -55,11 +55,11 @@ struct CaptureSettingsView: View {
 
                     HStack {
                         Text("More sensitive")
-                            .font(.system(size: 10))
+                            .font(.system(size: 11))
                             .foregroundStyle(.tertiary)
                         Spacer()
                         Text("Less sensitive")
-                            .font(.system(size: 10))
+                            .font(.system(size: 11))
                             .foregroundStyle(.tertiary)
                     }
                 }
