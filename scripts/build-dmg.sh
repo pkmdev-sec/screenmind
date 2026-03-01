@@ -69,15 +69,26 @@ else
 fi
 echo ""
 
-# Step 4: Ad-hoc code signing
-echo "[4/6] Code signing (ad-hoc)..."
-codesign --force --deep --sign - \
-    --entitlements "$PROJECT_DIR/ScreenMind.entitlements" \
-    "$APP_BUNDLE" 2>&1
-echo "  Signed: ad-hoc"
+# Step 4: Code signing
+# Use "ScreenMind Development" self-signed cert for stable signature (survives rebuilds).
+# Falls back to ad-hoc if cert not found.
+SIGNING_IDENTITY="ScreenMind Development"
+if security find-identity -v -p codesigning | grep -q "$SIGNING_IDENTITY"; then
+    echo "[4/6] Code signing (self-signed: $SIGNING_IDENTITY)..."
+    codesign --force --deep --sign "$SIGNING_IDENTITY" \
+        --entitlements "$PROJECT_DIR/ScreenMind.entitlements" \
+        "$APP_BUNDLE" 2>&1
+    echo "  Signed: $SIGNING_IDENTITY (stable — TCC permissions persist across rebuilds)"
+else
+    echo "[4/6] Code signing (ad-hoc fallback)..."
+    codesign --force --deep --sign - \
+        --entitlements "$PROJECT_DIR/ScreenMind.entitlements" \
+        "$APP_BUNDLE" 2>&1
+    echo "  Signed: ad-hoc (warning: TCC permissions will reset on each rebuild)"
+fi
 
 # Verify
-codesign --verify --verbose "$APP_BUNDLE" 2>&1 || echo "  Warning: verification returned non-zero (expected for ad-hoc)"
+codesign --verify --verbose "$APP_BUNDLE" 2>&1 || echo "  Warning: verification returned non-zero"
 echo ""
 
 # Step 5: Create DMG
