@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 import SwiftData
+import CoreGraphics
 import Shared
 import PipelineCore
 import AIProcessing
@@ -76,36 +77,30 @@ public final class AppState {
     }
 
     public func startMonitoring() {
+        // Gate on Screen Recording permission BEFORE touching ScreenCaptureKit.
+        // This prevents repeated system dialogs from the retry loop.
+        guard CGPreflightScreenCaptureAccess() else {
+            permissionGranted = false
+            configurationError = "Screen Recording permission required — grant in System Settings > Privacy & Security > Screen Recording, then click Start Monitoring"
+            SMLogger.ui.warning("Screen Recording not authorized — skipping pipeline start")
+            return
+        }
+
         isMonitoring = true
         isPaused = false
         configurationError = nil
+        permissionGranted = true
         SMLogger.ui.info("Monitoring started")
 
         retryTask = Task {
-            // Keep retrying until Screen Recording is granted (max 10 attempts)
-            var attempt = 0
-            let maxAttempts = 10
-            while isMonitoring && !Task.isCancelled {
-                attempt += 1
-                do {
-                    try await pipeline?.start()
-                    permissionGranted = true
-                    configurationError = nil
-                    SMLogger.ui.info("Pipeline running (attempt \(attempt, privacy: .public))")
-                    return
-                } catch {
-                    let msg = String(describing: error)
-                    if attempt <= 3 {
-                        SMLogger.ui.error("Pipeline attempt \(attempt, privacy: .public): \(msg, privacy: .public)")
-                    }
-                    if attempt >= maxAttempts {
-                        configurationError = "Screen Recording permission denied — grant in System Settings"
-                        isMonitoring = false
-                        SMLogger.ui.error("Max attempts reached — stopping retry")
-                        return
-                    }
-                    try? await Task.sleep(for: .seconds(attempt <= 3 ? 10 : 30))
-                }
+            do {
+                try await pipeline?.start()
+                SMLogger.ui.info("Pipeline running")
+            } catch {
+                let msg = String(describing: error)
+                SMLogger.ui.error("Pipeline start failed: \(msg, privacy: .public)")
+                configurationError = "Pipeline error: \(msg)"
+                isMonitoring = false
             }
         }
     }

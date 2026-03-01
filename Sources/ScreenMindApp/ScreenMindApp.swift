@@ -80,10 +80,14 @@ struct ScreenMindApp: App {
             }
         }
 
-        // Request screen capture permission on first launch
-        let status = PermissionsManager.screenCaptureStatus()
-        if status == .notDetermined {
-            PermissionsManager.requestScreenCapture()
+        // Only request screen capture permission on very first launch (never seen onboarding).
+        // After that, let the onboarding wizard or settings handle permission requests
+        // to avoid repeated system popups after ad-hoc re-signing.
+        if !UserDefaults.standard.bool(forKey: "hasRequestedScreenCapture") {
+            if !CGPreflightScreenCaptureAccess() {
+                UserDefaults.standard.set(true, forKey: "hasRequestedScreenCapture")
+                PermissionsManager.requestScreenCapture()
+            }
         }
 
         SMLogger.general.info("ScreenMind launched")
