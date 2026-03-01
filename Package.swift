@@ -9,7 +9,8 @@ let package = Package(
         .macOS(.v14)
     ],
     products: [
-        .executable(name: "ScreenMind", targets: ["ScreenMindApp"])
+        .executable(name: "ScreenMind", targets: ["ScreenMindApp"]),
+        .executable(name: "screenmind-cli", targets: ["ScreenMindCLI"])
     ],
     targets: [
         // MARK: - Shared Foundation
@@ -81,6 +82,18 @@ let package = Package(
                 "SystemIntegration"
             ],
             path: "Sources/ScreenMindApp"
+        ),
+
+        // MARK: - CLI Tool
+        .executableTarget(
+            name: "ScreenMindCLI",
+            dependencies: [
+                "Shared",
+                "StorageCore",
+                "AIProcessing",
+                "SystemIntegration"
+            ],
+            path: "Sources/ScreenMindCLI"
         ),
 
         // MARK: - Tests

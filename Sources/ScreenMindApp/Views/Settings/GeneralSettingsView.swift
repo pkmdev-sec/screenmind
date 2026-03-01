@@ -9,6 +9,7 @@ struct GeneralSettingsView: View {
     @AppStorage("launchAtLogin") private var launchAtLogin = false
     @AppStorage("obsidianVaultPath") private var vaultPath = AppConstants.Obsidian.defaultVaultPath
     @AppStorage("retentionDays") private var retentionDays = AppConstants.Storage.retentionDays
+    @AppStorage("apiServerEnabled") private var apiServerEnabled = false
 
     @Environment(\.modelContext) private var modelContext
 
@@ -167,6 +168,37 @@ struct GeneralSettingsView: View {
                     Text("\(Int(diskUsageRatio * 100))%")
                         .font(.system(size: 10, design: .monospaced))
                         .foregroundStyle(.tertiary)
+                }
+            }
+
+            Section("Developer API") {
+                Toggle("Enable local REST API (port 9876)", isOn: $apiServerEnabled)
+
+                HStack(spacing: 6) {
+                    Image(systemName: "network")
+                        .foregroundStyle(.blue)
+                        .font(.system(size: 12))
+                    Text("Exposes http://127.0.0.1:9876/api/ for Alfred, Raycast, Shortcuts, and scripts. Localhost only.")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                }
+
+                if apiServerEnabled {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Endpoints:")
+                            .font(.system(size: 11, weight: .medium))
+                        Text("""
+                        GET /api/notes?q=search&limit=20
+                        GET /api/notes/today
+                        GET /api/stats
+                        GET /api/apps
+                        GET /api/health
+                        """)
+                        .font(.system(size: 10, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                    }
+                    .padding(8)
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
                 }
             }
 
