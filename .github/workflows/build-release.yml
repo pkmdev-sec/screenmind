@@ -18,6 +18,9 @@ jobs:
         with:
           swift-version: '5.10'
 
+      - name: Run Tests
+        run: swift test
+
       - name: Build Release
         run: swift build -c release
 
