@@ -8,6 +8,7 @@ import StorageCore
 import SystemIntegration
 import AudioCore
 import SemanticSearch
+import PluginSystem
 import SwiftData
 
 /// Orchestrates the full capture → detection → OCR → AI → storage pipeline.
@@ -77,6 +78,10 @@ public actor PipelineCoordinator {
 
         // Initialize semantic search
         try? await semanticSearch.setup()
+
+        // Load plugins
+        await PluginEngine.shared.loadAllPlugins()
+        await PluginEngine.shared.trigger(event: .appStartup, data: [:])
 
         // Request calendar access for meeting detection (non-blocking)
         if UserDefaults.standard.object(forKey: "audioMeetingDetection") as? Bool ?? true {
@@ -380,6 +385,16 @@ public actor PipelineCoordinator {
             // Record stats + learn tag patterns
             await resourceMonitor.recordNoteGenerated(aiTimeMs: 0)
             TagSuggester.recordTags(generatedNote.tags)
+
+            // Trigger plugin hooks
+            await PluginEngine.shared.trigger(event: .noteCreated, data: [
+                "id": savedNote.id.uuidString,
+                "title": generatedNote.title,
+                "summary": generatedNote.summary,
+                "category": generatedNote.category.rawValue,
+                "tags": generatedNote.tags,
+                "app": frame.appName
+            ])
 
             // Index for semantic search
             let indexText = "\(generatedNote.title) \(generatedNote.summary) \(generatedNote.details)"

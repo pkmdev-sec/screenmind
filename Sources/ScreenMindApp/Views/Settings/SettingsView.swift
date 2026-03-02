@@ -39,7 +39,12 @@ struct SettingsView: View {
                 .tabItem {
                     Label("Stats", systemImage: "gauge.with.dots.needle.33percent")
                 }
+
+            PluginSettingsView()
+                .tabItem {
+                    Label("Plugins", systemImage: "puzzlepiece.extension")
+                }
         }
-        .frame(width: 740, height: 600)
+        .frame(width: 780, height: 620)
     }
 }
