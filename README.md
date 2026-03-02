@@ -22,6 +22,7 @@
   <img src="https://img.shields.io/badge/platform-macOS%2014%2B-blue?style=flat-square&logo=apple" alt="macOS 14+" />
   <img src="https://img.shields.io/badge/swift-5.10-orange?style=flat-square&logo=swift" alt="Swift 5.10" />
   <img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="MIT License" />
+  <img src="https://img.shields.io/badge/tests-285%20passing-brightgreen?style=flat-square" alt="285 Tests Passing" />
   <img src="https://img.shields.io/badge/obsidian-compatible-7C3AED?style=flat-square" alt="Obsidian Compatible" />
   <img src="https://img.shields.io/badge/AI-multi--provider-FF6B6B?style=flat-square" alt="Multi-Provider AI" />
 </p>
@@ -46,18 +47,19 @@ ScreenMind runs a smart multi-stage pipeline that's designed to be invisible:
 
 ```
 Screen Capture → Change Detection → OCR → Redaction → Skip Rules →
-Content Dedup → AI Analysis → Storage → Multi-Format Export
+Stealth Check → Content Dedup → AI Analysis → Storage → Multi-Format Export
 ```
 
 1. **Captures** your screen at smart intervals (active window, multi-display aware)
 2. **Detects** meaningful changes via perceptual hashing (ignores idle/static screens)
 3. **Reads** text using Apple Vision framework (on-device OCR)
-4. **Redacts** sensitive data (credit cards, API keys, passwords) before AI processing
-5. **Evaluates** user-defined skip rules to filter unwanted content
+4. **Redacts** sensitive data (credit cards, API keys, passwords) + ML-based PII detection
+5. **Evaluates** user-defined skip rules and stealth mode to filter unwanted content
 6. **Deduplicates** aggressively with 5-layer defense (hash + Jaccard + cooldown + content + buffer)
-7. **Analyzes** content with AI to generate structured notes (title, summary, details, tags, links)
-8. **Saves** to SwiftData + exports to Obsidian, JSON, Markdown, or Webhook
-9. **Encrypts** screenshots at rest with AES-256-GCM (optional)
+7. **Analyzes** content with AI — app-specific prompts, vision support, context windows
+8. **Saves** to SwiftData + exports to Obsidian, JSON, Markdown, Notion, Logseq, Slack, or Webhook
+9. **Encrypts** screenshots and notes at rest with AES-256-GCM (optional)
+10. **Indexes** semantically for instant vector search and knowledge graph discovery
 
 ## Features
 
@@ -68,16 +70,26 @@ Content Dedup → AI Analysis → Storage → Multi-Format Export
 - Reduced capture rate on low battery (not full stop)
 - Excluded apps list (skip sensitive or noisy apps)
 - **Manual capture** with `Cmd+Opt+Shift+C` for on-demand notes
+- **Screenshot diffing** — pixel-level comparison with connected component analysis to identify what changed
 
 ### Multi-Provider AI
-- **Claude** (Anthropic) — default
-- **OpenAI** (GPT-4o, GPT-4o-mini)
+- **Claude** (Anthropic) — default, supports vision
+- **OpenAI** (GPT-4o, GPT-4o-mini) — supports vision
 - **Ollama** (fully offline, local models)
-- **Gemini** (Google, via OpenAI compat)
+- **Gemini** (Google, via OpenAI compat) — supports vision
 - **Custom** (any OpenAI-compatible endpoint)
 - Per-provider API key, base URL, and model configuration
 - One-click connection testing
 - Shared prompt system (consistent quality across providers)
+- **Custom prompts per app** — different AI behavior for Xcode vs Slack vs Chrome
+- **Multi-modal vision** — sends screenshot to AI for visual understanding (not just OCR text)
+- **Context windows** — AI sees last N notes for continuity across captures
+- **AI feedback learning** — rate notes thumbs up/down, AI adapts over time
+
+### Visual Intelligence
+- **UI element detection** — identifies buttons, text fields, dialogs, menus via Apple Vision
+- **Screenshot diffing** — highlights what changed between captures with region analysis
+- **Chart detection** — recognizes charts/diagrams and adds specialized extraction prompts
 
 ### Intelligent Notes
 - Structured, actionable notes from screen content
@@ -85,6 +97,7 @@ Content Dedup → AI Analysis → Storage → Multi-Format Export
 - Smart categorization: coding, research, meetings, communication, reading, terminal
 - Obsidian-compatible wiki-links and tags
 - Smart tag suggestions that learn from your note history
+- **Meeting summaries** — combines screen + audio + calendar context into action-item summaries
 
 ### Visual Timeline
 - Browse captures visually in a gallery or list view
@@ -98,18 +111,35 @@ Content Dedup → AI Analysis → Storage → Multi-Format Export
 - **Obsidian Markdown** — daily folders, frontmatter, wiki-links, daily summaries
 - **JSON** — one file per note for data pipelines and scripts
 - **Flat Markdown** — simple .md without vault structure
+- **Notion** — direct export via Notion API with database properties
+- **Logseq** — journal format with properties syntax
+- **Slack** — post note summaries to channels via Incoming Webhooks
 - **Webhook** — POST note JSON to any URL (Zapier, Make.com, n8n)
 - SSRF protection on webhooks (blocks private IPs)
 - Multiple exporters can run simultaneously
 
 ### Privacy & Security
 - **Content redaction** — auto-strips credit cards, SSNs, API keys, passwords, emails before AI
+- **ML-based PII detection** — NaturalLanguage NLTagger identifies names, places, organizations
+- **PII sensitivity levels** — off, low (names), medium (+places), high (+all entities)
 - **Custom redaction patterns** — add your own regex patterns
 - **Skip rules** — text contains, app matches, window title matches, regex patterns
+- **Stealth mode** — auto-pauses in sensitive apps (1Password, Bitwarden, banking, incognito windows)
 - **Screenshot encryption** — AES-256-GCM with key in macOS Keychain
+- **Note encryption** — AES-256-GCM for note title, summary, and details fields
+- **Master password** — PBKDF2 key derivation (600,000 iterations) for vault protection
+- **Vault lock** — Touch ID / password with auto-lock after configurable timeout
 - **Audit log** — CSV trail of all captured, skipped, redacted, and exported events
-- Exportable audit logs for compliance
+- **GDPR compliance** — data export, retention policies, compliance reports
 - All data stored locally. No cloud. No telemetry.
+
+### Performance & Scale
+- **Parallel OCR pipeline** — configurable concurrency (default 3 workers) with backpressure
+- **HNSW vector index** — O(log n) approximate nearest neighbor search (replaces linear scan)
+- **HEIF compression** — 40-60% smaller screenshots vs JPEG at equivalent quality
+- OCR result caching (LRU, 24h TTL)
+- Screenshot storage quota enforcement (auto-cleanup at 1GB)
+- CPU-aware throttling (pauses OCR if CPU >30%)
 
 ### Performance Dashboard
 - Live CPU, RAM, and battery gauges
@@ -117,8 +147,6 @@ Content Dedup → AI Analysis → Storage → Multi-Format Export
 - Notes/hour rate and session uptime
 - Average OCR and AI processing times
 - Skip and redaction counters
-- OCR result caching (LRU, 24h TTL) for performance
-- Screenshot storage quota enforcement (auto-cleanup at 1GB)
 
 ### Audio Intelligence
 - **Voice memos** — `Cmd+Opt+Shift+V` to record, auto-transcribes on-device
@@ -128,44 +156,53 @@ Content Dedup → AI Analysis → Storage → Multi-Format Export
 - Configurable language, VAD sensitivity, memo duration
 
 ### Semantic Search & AI Chat
-- **Vector embeddings** — On-device via NaturalLanguage.framework (512-dim)
-- **Semantic search** — Find notes by meaning, not just keywords
+- **Vector embeddings** — on-device via NaturalLanguage.framework (512-dim)
+- **Semantic search** — find notes by meaning, not just keywords
+- **HNSW index** — sub-millisecond search over 100,000+ notes
 - **Natural language queries** — "What was I coding yesterday morning?"
 - **Chat with your notes** — RAG-powered AI chat window with conversation history
 - Auto-indexes every note (title + summary + details)
 
 ### Knowledge Graph
-- **Auto-linking** — Discovers related notes via semantic similarity (>60%)
-- **Visual graph** — Force-directed layout with category color coding
-- **Interactive** — Pan, zoom, search, select nodes for details
-- **Project detection** — Auto-detects projects from Xcode/VS Code window titles
-- **Weekly summaries** — Stats: top apps, categories, tags, daily breakdown
+- **Auto-linking** — discovers related notes via semantic similarity (>60%)
+- **Visual graph** — force-directed layout with category color coding
+- **Interactive** — pan, zoom, search, select nodes for details
+- **Project detection** — auto-detects projects from Xcode/VS Code window titles
+- **Weekly summaries** — stats: top apps, categories, tags, daily breakdown
 
 ### Plugin System
-- **JavaScript plugins** — Sandboxed via JavaScriptCore
+- **JavaScript plugins** — sandboxed via JavaScriptCore
 - **6 lifecycle hooks** — onNoteCreated, onNoteSaved, onNoteExported, onAppStartup, onAppShutdown, onTimer
 - **MCP Server** — Claude Desktop / Cursor integration on localhost:9877
 - **Plugin management** — Settings tab with install/uninstall/configure
 - Safe APIs: `log()`, `fetch()` (with permission), `getEnv()`
 
+### Ecosystem Integrations
+- **Notion** — export notes directly to Notion databases via API
+- **Logseq** — journal-format export with properties syntax
+- **Slack** — post summaries to channels via Block Kit webhooks
+- **GitHub** — create issues from notes with labels and body formatting
+- **Todoist** — auto-extract action items (TODO/FIXME) and create tasks
+
 ### Note Editing & Advanced UX
-- **Inline editing** — Edit title, summary, details, tags, category after creation
-- **Auto-save** — Debounced 500ms save with visual indicator
-- **Calendar heatmap** — Month-view note density visualization, click to filter
-- **Focus mode integration** — Pauses capture during macOS DND (opt-in)
+- **Inline editing** — edit title, summary, details, tags, category after creation
+- **Auto-save** — debounced 500ms save with visual indicator
+- **Calendar heatmap** — month-view note density visualization, click to filter
+- **Focus mode integration** — pauses capture during macOS DND (opt-in)
+- **Command palette** — `Cmd+K` for quick navigation
 - Tag management with add/remove
 
 ### Browser Extension (Chrome/Firefox/Arc)
 - **Capture page context** — URL, title, selected text, favicon, meta description
-- **One-click capture** — Send current page to ScreenMind instantly
+- **One-click capture** — send current page to ScreenMind instantly
 - **Right-click menu** — "Send to ScreenMind" context menu item
-- **Connection status** — Shows if ScreenMind API is running
+- **Connection status** — shows if ScreenMind API is running
 - Works with Chrome, Edge, Brave, Arc, and Chromium browsers
 
 ### Workflow Automation
 - **If-this-then-that rules** for note events
 - **6 triggers** — noteCreated, categoryIs, appIs, tagContains, titleContains, confidenceAbove
-- **4 actions** — addTag, webhook, notify, exportToFolder
+- **6 actions** — addTag, webhook, notify, exportToFolder, slackPost, createGitHubIssue
 - Rules evaluate after every note creation
 - Persistent rules saved across restarts
 
@@ -205,6 +242,7 @@ For Claude Desktop / Cursor integration:
   - `Cmd+Shift+P` — Pause/Resume
   - `Cmd+Shift+S` — Notes browser
   - `Cmd+Shift+T` — Timeline
+  - `Cmd+K` — Command palette
   - `Cmd+Opt+Shift+C` — Manual capture
   - `Cmd+Opt+Shift+V` — Voice memo
 - Spotlight indexing for system-wide search
@@ -255,21 +293,21 @@ cp .build/release/screenmind-cli /usr/local/bin/
 
 ## Architecture
 
-ScreenMind is built as a clean Swift Package Manager project with 12 independent modules:
+ScreenMind is built as a clean Swift Package Manager project with 12 independent modules and 285 unit tests:
 
 ```
 ScreenMindApp            <- Main app (SwiftUI menu bar + windows)
   |- PipelineCore        <- Orchestrates capture-to-note pipeline
   |   |- CaptureCore         <- ScreenCaptureKit + multi-display + manual capture
-  |   |- ChangeDetection     <- Perceptual hashing (dHash) + rolling window
-  |   |- OCRProcessing       <- Apple Vision + redaction + LRU cache
-  |   |- AIProcessing        <- Multi-provider AI + smart tags + shared prompts
-  |   |- StorageCore         <- SwiftData + exporters + encryption + thumbnails
-  |   |- SystemIntegration   <- Shortcuts, Spotlight, notifications, power, API/MCP
+  |   |- ChangeDetection     <- Perceptual hashing (dHash) + screenshot diffing
+  |   |- OCRProcessing       <- Apple Vision + redaction + ML PII + parallel queue
+  |   |- AIProcessing        <- Multi-provider AI + vision + custom prompts + feedback
+  |   |- StorageCore         <- SwiftData + exporters + encryption + migration framework
+  |   |- SystemIntegration   <- Shortcuts, Spotlight, notifications, API/MCP, vault lock
   |   |- AudioCore           <- Microphone capture, speech-to-text, voice memos
-  |   |- SemanticSearch      <- Vector embeddings, NL queries, RAG chat, knowledge graph
+  |   |- SemanticSearch      <- HNSW vector index, NL queries, RAG chat, knowledge graph
   |   '- PluginSystem        <- JavaScriptCore plugin engine + lifecycle hooks
-  '- Shared              <- Constants, logging, keychain, utilities
+  '- Shared              <- Constants, logging, keychain, sync engine, utilities
 ScreenMindCLI            <- CLI tool (search, export, stats)
 ```
 
@@ -284,9 +322,9 @@ All settings accessible from the menu bar > Settings:
 | **General** | Launch at login, Obsidian vault path, data retention, disk usage, API server toggle |
 | **Capture** | Active/idle intervals, detection sensitivity, excluded apps |
 | **Audio** | Microphone toggle, VAD sensitivity, language, meeting detection, memo duration |
-| **AI** | Provider selection, API key, model, endpoint, temperature, rate limit |
-| **Export** | Enable/disable Obsidian, JSON, Markdown, Webhook + per-format config |
-| **Privacy** | Content redaction, custom patterns, skip rules, encryption, audit log |
+| **AI** | Provider selection, API key, model, endpoint, temperature, rate limit, vision toggle, custom prompts |
+| **Export** | Enable/disable Obsidian, JSON, Markdown, Notion, Logseq, Slack, Webhook + per-format config |
+| **Privacy** | Content redaction, PII detection level, custom patterns, skip rules, stealth mode, encryption, vault password, audit log |
 | **Stats** | Live CPU/RAM/battery gauges, pipeline throughput, processing times |
 | **Plugins** | Installed plugins, MCP server config, plugin development guide |
 
@@ -298,8 +336,12 @@ We take your screen data seriously:
 - **No telemetry.** We don't collect usage data, analytics, or crash reports.
 - **Your API key, your calls.** Requests go directly from your Mac to the AI provider. We never see your data.
 - **Automatic content redaction.** Credit cards, SSNs, API keys, passwords, and emails are replaced with `[REDACTED]` before reaching the AI.
-- **Screenshot encryption.** Optional AES-256-GCM encryption with key in macOS Keychain.
+- **ML-based PII detection.** Named entity recognition catches person names, places, and organizations that regex misses.
+- **Stealth mode.** Auto-pauses capture in password managers, banking apps, and incognito browser windows.
+- **Screenshot + note encryption.** Optional AES-256-GCM encryption with key in macOS Keychain or master password.
+- **Vault lock.** Touch ID or password protection with auto-lock after idle timeout.
 - **Audit trail.** Full CSV log of every capture, skip, redaction, and export action.
+- **GDPR compliance.** Data export, configurable retention policies, and compliance reporting.
 - **One-click delete.** Settings > Privacy > Delete All Data removes everything instantly.
 - **Skip rules.** Define exactly what content should never be captured.
 
@@ -316,11 +358,11 @@ ScreenMind is open source and we'd love your help! Here's how:
 Ideas for contributions:
 - Windows / Linux port (Rust core extraction)
 - iOS companion app for reading notes on the go
-- Logseq / Notion export plugins (via Plugin System)
-- Custom AI prompt templates per app
 - Whisper.cpp integration for offline speech-to-text
 - Firefox extension port (WebExtensions API)
 - iCloud sync for multi-Mac setups
+- Additional AI provider integrations
+- Custom plugin marketplace
 
 ## License
 
