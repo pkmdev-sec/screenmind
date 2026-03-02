@@ -1,0 +1,60 @@
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    name: Build ScreenMind
+    runs-on: macos-14
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Swift
+        uses: swift-actions/setup-swift@v2
+        with:
+          swift-version: '5.10'
+
+      - name: Build Release
+        run: swift build -c release
+
+      - name: Create App Bundle
+        run: |
+          mkdir -p ScreenMind.app/Contents/MacOS
+          mkdir -p ScreenMind.app/Contents/Resources
+          cp .build/release/ScreenMind ScreenMind.app/Contents/MacOS/
+          cp Sources/ScreenMindApp/Resources/Info.plist ScreenMind.app/Contents/Info.plist
+          echo -n "APPL????" > ScreenMind.app/Contents/PkgInfo
+
+      - name: Code Sign (Ad-hoc)
+        run: |
+          codesign --force --deep --sign - \
+            --entitlements ScreenMind.entitlements \
+            ScreenMind.app
+
+      - name: Create DMG
+        run: |
+          mkdir -p dmg_staging
+          cp -R ScreenMind.app dmg_staging/
+          ln -s /Applications dmg_staging/Applications
+          hdiutil create -volname ScreenMind \
+            -srcfolder dmg_staging \
+            -ov -format UDZO \
+            ScreenMind.dmg
+
+      - name: Build CLI
+        run: |
+          cp .build/release/screenmind-cli .
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ScreenMind.dmg
+            screenmind-cli
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -2,6 +2,7 @@ import SwiftUI
 import SwiftData
 import Shared
 import StorageCore
+import SystemIntegration
 
 /// The main popover content shown from the menu bar icon.
 struct MenuBarContentView: View {
@@ -282,6 +283,30 @@ struct MenuBarContentView: View {
 
             // Bottom actions
             VStack(spacing: 0) {
+                Button {
+                    Task {
+                        let checker = UpdateChecker.shared
+                        if let update = await checker.checkForUpdates(force: true), update.isUpdateAvailable {
+                            NSWorkspace.shared.open(URL(string: update.downloadURL)!)
+                        }
+                    }
+                } label: {
+                    HStack {
+                        Label("Check for Updates", systemImage: "arrow.triangle.2.circlepath")
+                            .font(.system(size: 12))
+                        Spacer()
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 6)
+                    .contentShape(Rectangle())
+                    .background(
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(.quaternary.opacity(hoveredButton == "update" ? 0.8 : 0))
+                    )
+                    .onHover { hoveredButton = $0 ? "update" : nil }
+                }
+                .buttonStyle(.plain)
+
                 Button {
                     openWindowFront(id: "settings")
                 } label: {
