@@ -167,6 +167,11 @@ struct ChatView: View {
         isProcessing = true
         errorMessage = nil
 
+        // Capture model container on MainActor BEFORE entering background Task
+        // SwiftData modelContext is @MainActor isolated — accessing it from a
+        // background Task causes EXC_BREAKPOINT (_dispatch_assert_queue_fail)
+        let container = modelContext.container
+
         Task {
             do {
                 // Initialize semantic search and chat actor
@@ -175,7 +180,7 @@ struct ChatView: View {
                 let chatActor = ChatActor(semanticSearch: semanticSearch)
 
                 // Get RAG response with context from notes
-                let chatResponse = try await chatActor.ask(question: query, modelContainer: modelContext.container)
+                let chatResponse = try await chatActor.ask(question: query, modelContainer: container)
 
                 // Check if AI provider is configured
                 guard let aiProvider = AIProviderFactory.createProvider() else {
