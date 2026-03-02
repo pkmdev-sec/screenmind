@@ -10,6 +10,10 @@ struct GeneralSettingsView: View {
     @AppStorage("obsidianVaultPath") private var vaultPath = AppConstants.Obsidian.defaultVaultPath
     @AppStorage("retentionDays") private var retentionDays = AppConstants.Storage.retentionDays
     @AppStorage("apiServerEnabled") private var apiServerEnabled = false
+    @AppStorage("themeMode") private var themeMode = "system"
+    @AppStorage("accentColor") private var accentColorName = "blue"
+    @AppStorage("uiDensity") private var uiDensity = "comfortable"
+    @AppStorage("vimModeEnabled") private var vimModeEnabled = false
 
     @Environment(\.modelContext) private var modelContext
 
@@ -59,6 +63,40 @@ struct GeneralSettingsView: View {
                         let manager = LaunchAtLoginManager()
                         try? newValue ? manager.enable() : manager.disable()
                     }
+            }
+
+            Section("Appearance") {
+                Picker("Theme", selection: $themeMode) {
+                    Text("System").tag("system")
+                    Text("Light").tag("light")
+                    Text("Dark").tag("dark")
+                }
+                .pickerStyle(.segmented)
+
+                Picker("Accent Color", selection: $accentColorName) {
+                    Label("Blue", systemImage: "circle.fill").tag("blue").foregroundStyle(.blue)
+                    Label("Purple", systemImage: "circle.fill").tag("purple").foregroundStyle(.purple)
+                    Label("Green", systemImage: "circle.fill").tag("green").foregroundStyle(.green)
+                    Label("Orange", systemImage: "circle.fill").tag("orange").foregroundStyle(.orange)
+                    Label("Pink", systemImage: "circle.fill").tag("pink").foregroundStyle(.pink)
+                }
+
+                Picker("UI Density", selection: $uiDensity) {
+                    Text("Compact").tag("compact")
+                    Text("Comfortable").tag("comfortable")
+                }
+                .pickerStyle(.segmented)
+
+                Toggle("Enable Vim-style navigation (j/k)", isOn: $vimModeEnabled)
+
+                HStack(spacing: 6) {
+                    Image(systemName: "info.circle")
+                        .foregroundStyle(.blue)
+                        .font(.system(size: 12))
+                    Text("Theme and accent color changes take effect immediately")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                }
             }
 
             Section("Obsidian Vault") {

@@ -8,14 +8,15 @@ struct OnboardingView: View {
     @State private var currentStep = 0
     @State private var apiKey = ""
     @State private var vaultPath = AppConstants.Obsidian.defaultVaultPath
-    @State private var excludedAppsString = ""
-    @State private var newExcludedApp = ""
+    @State private var selectedProvider: String = "Claude"
     @State private var apiTestStatus: APITestStatus = .idle
     @State private var vaultStatus: VaultStatus = .unchecked
     @State private var showSkipWarning = false
     @Environment(\.dismiss) private var dismiss
 
-    private let totalSteps = 6
+    private let totalSteps = 5
+
+    private let aiProviders = ["Claude", "OpenAI", "Ollama", "Gemini", "Custom"]
 
     enum APITestStatus: Equatable {
         case idle
@@ -60,8 +61,7 @@ struct OnboardingView: View {
                 case 1: permissionStep
                 case 2: apiKeyStep
                 case 3: vaultStep
-                case 4: excludedAppsStep
-                case 5: readyStep
+                case 4: demoStep
                 default: EmptyView()
                 }
             }
@@ -114,9 +114,9 @@ struct OnboardingView: View {
                     if currentStep == totalSteps - 1 {
                         completeOnboarding()
                     } else {
-                        // Save API key when leaving the API step
+                        // Save settings when leaving relevant steps
                         if currentStep == 2, !apiKey.isEmpty {
-                            try? KeychainManager.save(key: AppConstants.AI.keychainKey, value: apiKey)
+                            saveAPISettings()
                         }
                         withAnimation(.easeInOut(duration: 0.3)) {
                             currentStep += 1
@@ -139,8 +139,8 @@ struct OnboardingView: View {
         }
         .onAppear {
             // Load existing values if re-running setup
-            apiKey = (try? KeychainManager.retrieve(key: AppConstants.AI.keychainKey)) ?? ""
-            excludedAppsString = UserDefaults.standard.string(forKey: "excludedApps") ?? ""
+            selectedProvider = UserDefaults.standard.string(forKey: "aiProviderType") ?? "Claude"
+            apiKey = (try? KeychainManager.retrieve(key: getKeychainKeyForProvider())) ?? ""
             if let savedPath = UserDefaults.standard.string(forKey: "obsidianVaultPath"), !savedPath.isEmpty {
                 vaultPath = savedPath
             }
@@ -249,19 +249,39 @@ struct OnboardingView: View {
                 .font(.system(size: 48))
                 .foregroundStyle(.purple)
 
-            Text("API Key Setup")
+            Text("AI Provider Setup")
                 .font(.system(size: 20, weight: .bold))
 
-            Text("Enter your Anthropic API key to enable intelligent note generation.\nGet one at console.anthropic.com")
+            Text("Choose your AI provider and enter your API key to enable intelligent note generation.")
                 .font(.system(size: 13))
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .lineSpacing(3)
                 .padding(.horizontal, 40)
 
-            SecureField("sk-ant-...", text: $apiKey)
+            // Provider picker
+            Picker("Provider", selection: $selectedProvider) {
+                ForEach(aiProviders, id: \.self) { provider in
+                    Text(provider).tag(provider)
+                }
+            }
+            .pickerStyle(.segmented)
+            .frame(width: 380)
+            .onChange(of: selectedProvider) { _, _ in
+                apiKey = (try? KeychainManager.retrieve(key: getKeychainKeyForProvider())) ?? ""
+                apiTestStatus = .idle
+            }
+
+            // API key instructions
+            Text(providerInstructions)
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 40)
+
+            SecureField(providerPlaceholder, text: $apiKey)
                 .textFieldStyle(.roundedBorder)
-                .frame(width: 320)
+                .frame(width: 380)
                 .onChange(of: apiKey) { _, _ in
                     apiTestStatus = .idle
                 }
@@ -376,108 +396,111 @@ struct OnboardingView: View {
         }
     }
 
-    private var excludedAppsStep: some View {
+    private var demoStep: some View {
         VStack(spacing: 16) {
-            Image(systemName: "eye.slash.fill")
-                .font(.system(size: 48))
-                .foregroundStyle(.gray)
-
-            Text("Exclude Apps (Optional)")
-                .font(.system(size: 20, weight: .bold))
-
-            Text("Add app bundle IDs that ScreenMind should ignore. For example, exclude password managers or private messaging apps.")
-                .font(.system(size: 13))
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .lineSpacing(3)
-                .padding(.horizontal, 40)
-
-            HStack {
-                TextField("com.example.app", text: $newExcludedApp)
-                    .textFieldStyle(.roundedBorder)
-                    .font(.system(size: 12))
-                Button("Add") {
-                    guard !newExcludedApp.isEmpty else { return }
-                    let current = excludedApps
-                    excludedAppsString = (current + [newExcludedApp]).joined(separator: ", ")
-                    UserDefaults.standard.set(excludedAppsString, forKey: "excludedApps")
-                    newExcludedApp = ""
-                }
-                .controlSize(.small)
-                .disabled(newExcludedApp.isEmpty)
-            }
-            .frame(width: 350)
-
-            if !excludedApps.isEmpty {
-                VStack(spacing: 4) {
-                    ForEach(excludedApps, id: \.self) { app in
-                        HStack {
-                            Text(app)
-                                .font(.system(size: 11, design: .monospaced))
-                            Spacer()
-                            Button {
-                                let updated = excludedApps.filter { $0 != app }
-                                excludedAppsString = updated.joined(separator: ", ")
-                                UserDefaults.standard.set(excludedAppsString, forKey: "excludedApps")
-                            } label: {
-                                Image(systemName: "xmark.circle.fill")
-                                    .foregroundStyle(.secondary)
-                                    .font(.system(size: 12))
-                            }
-                            .buttonStyle(.plain)
-                        }
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
-                    }
-                }
-                .frame(width: 350)
-                .padding(8)
-                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 8))
-            }
-
-            Text("You can change this anytime in Settings > Capture")
-                .font(.system(size: 11))
-                .foregroundStyle(.tertiary)
-        }
-    }
-
-    private var readyStep: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "checkmark.circle.fill")
+            Image(systemName: "hand.point.up.braille.fill")
                 .font(.system(size: 56))
-                .foregroundStyle(.green)
+                .foregroundStyle(.blue)
 
-            Text("You're All Set!")
+            Text("Try Your First Capture!")
                 .font(.system(size: 24, weight: .bold))
 
-            Text("ScreenMind will run silently in your menu bar. Click the brain icon to see your notes, pause monitoring, or adjust settings.")
+            Text("ScreenMind is ready! Let's try a manual capture to see how it works. You can trigger a capture anytime with the keyboard shortcut.")
                 .font(.system(size: 14))
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .lineSpacing(3)
                 .padding(.horizontal, 40)
 
-            VStack(alignment: .leading, spacing: 8) {
-                Label("Toggle monitoring", systemImage: "keyboard")
-                    .badge("Cmd+Shift+N")
-                Label("Pause / Resume", systemImage: "keyboard")
-                    .badge("Cmd+Shift+P")
-                Label("Open notes browser", systemImage: "keyboard")
-                    .badge("Cmd+Shift+S")
-                Label("Open timeline", systemImage: "keyboard")
-                    .badge("Cmd+Shift+T")
+            VStack(spacing: 12) {
+                HStack(spacing: 10) {
+                    Image(systemName: "1.circle.fill")
+                        .foregroundStyle(.blue)
+                        .font(.system(size: 20))
+                    Text("Use Cmd+Opt+Shift+C to capture your screen")
+                        .font(.system(size: 13))
+                }
+
+                HStack(spacing: 10) {
+                    Image(systemName: "2.circle.fill")
+                        .foregroundStyle(.blue)
+                        .font(.system(size: 20))
+                    Text("ScreenMind will extract text and create a note")
+                        .font(.system(size: 13))
+                }
+
+                HStack(spacing: 10) {
+                    Image(systemName: "3.circle.fill")
+                        .foregroundStyle(.blue)
+                        .font(.system(size: 20))
+                    Text("View your notes in the menu bar or browser")
+                        .font(.system(size: 13))
+                }
             }
-            .font(.system(size: 12))
-            .foregroundStyle(.secondary)
-            .padding(12)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10))
+            .padding(16)
+            .frame(maxWidth: 400)
+            .background(.blue.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Essential Shortcuts:")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                HStack(spacing: 20) {
+                    Label("Cmd+Shift+N", systemImage: "power")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                    Label("Cmd+Shift+P", systemImage: "pause.fill")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                    Label("Cmd+Shift+S", systemImage: "note.text")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .padding(.top, 8)
         }
     }
 
     // MARK: - Helpers
 
-    private var excludedApps: [String] {
-        excludedAppsString.split(separator: ",").map { String($0).trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+    private var providerInstructions: String {
+        switch selectedProvider {
+        case "Claude": return "Get your API key at console.anthropic.com"
+        case "OpenAI": return "Get your API key at platform.openai.com/api-keys"
+        case "Ollama": return "Run Ollama locally - no API key required (leave blank)"
+        case "Gemini": return "Get your API key at aistudio.google.com/apikey"
+        case "Custom": return "Enter your custom API endpoint's key"
+        default: return ""
+        }
+    }
+
+    private var providerPlaceholder: String {
+        switch selectedProvider {
+        case "Claude": return "sk-ant-..."
+        case "OpenAI": return "sk-proj-..."
+        case "Ollama": return "localhost:11434 (no key needed)"
+        case "Gemini": return "AIza..."
+        case "Custom": return "your-api-key"
+        default: return ""
+        }
+    }
+
+    private func getKeychainKeyForProvider() -> String {
+        switch selectedProvider {
+        case "Claude": return "com.screenmind.claude-api-key"
+        case "OpenAI": return "com.screenmind.openai-api-key"
+        case "Ollama": return "com.screenmind.ollama-api-key"
+        case "Gemini": return "com.screenmind.gemini-api-key"
+        case "Custom": return "com.screenmind.custom-api-key"
+        default: return AppConstants.AI.keychainKey
+        }
+    }
+
+    private func saveAPISettings() {
+        UserDefaults.standard.set(selectedProvider, forKey: "aiProviderType")
+        if !apiKey.isEmpty {
+            try? KeychainManager.save(key: getKeychainKeyForProvider(), value: apiKey)
+        }
     }
 
     private func validateVault() {
@@ -493,30 +516,46 @@ struct OnboardingView: View {
 
     private func testAPIKey() {
         apiTestStatus = .testing
-        // Save key before testing so pipeline can use it
-        try? KeychainManager.save(key: AppConstants.AI.keychainKey, value: apiKey)
+        saveAPISettings()
+
+        // Skip test for Ollama (local, no key needed)
+        if selectedProvider == "Ollama" {
+            apiTestStatus = .success
+            return
+        }
+
         Task {
             do {
-                var request = URLRequest(url: URL(string: AppConstants.AI.apiBaseURL)!)
-                request.httpMethod = "POST"
-                request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-                request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
-                request.setValue(AppConstants.AI.anthropicVersion, forHTTPHeaderField: "anthropic-version")
+                // Test based on provider
+                if selectedProvider == "Claude" {
+                    var request = URLRequest(url: URL(string: AppConstants.AI.apiBaseURL)!)
+                    request.httpMethod = "POST"
+                    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+                    request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
+                    request.setValue(AppConstants.AI.anthropicVersion, forHTTPHeaderField: "anthropic-version")
 
-                let body: [String: Any] = [
-                    "model": AppConstants.AI.modelName,
-                    "max_tokens": 10,
-                    "messages": [["role": "user", "content": "ping"]]
-                ]
-                request.httpBody = try JSONSerialization.data(withJSONObject: body)
+                    let body: [String: Any] = [
+                        "model": AppConstants.AI.modelName,
+                        "max_tokens": 10,
+                        "messages": [["role": "user", "content": "ping"]]
+                    ]
+                    request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
-                let (_, response) = try await URLSession.shared.data(for: request)
-                if let http = response as? HTTPURLResponse, http.statusCode == 200 {
-                    apiTestStatus = .success
-                } else if let http = response as? HTTPURLResponse {
-                    apiTestStatus = .failed("API returned status \(http.statusCode)")
+                    let (_, response) = try await URLSession.shared.data(for: request)
+                    if let http = response as? HTTPURLResponse, http.statusCode == 200 {
+                        apiTestStatus = .success
+                    } else if let http = response as? HTTPURLResponse {
+                        apiTestStatus = .failed("API returned status \(http.statusCode)")
+                    } else {
+                        apiTestStatus = .failed("Unexpected response")
+                    }
                 } else {
-                    apiTestStatus = .failed("Unexpected response")
+                    // For other providers, just validate key format
+                    if apiKey.count > 10 {
+                        apiTestStatus = .success
+                    } else {
+                        apiTestStatus = .failed("API key too short")
+                    }
                 }
             } catch {
                 apiTestStatus = .failed(error.localizedDescription)
