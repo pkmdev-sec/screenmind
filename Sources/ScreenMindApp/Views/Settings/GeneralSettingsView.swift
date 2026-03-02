@@ -93,7 +93,7 @@ struct GeneralSettingsView: View {
                     Image(systemName: "info.circle")
                         .foregroundStyle(.blue)
                         .font(.system(size: 12))
-                    Text("Theme and accent color changes take effect immediately")
+                    Text("Theme, accent color, and density changes take effect immediately")
                         .font(.system(size: 11))
                         .foregroundStyle(.secondary)
                 }

@@ -14,6 +14,7 @@ struct ScreenMindApp: App {
     @State private var appState = AppState()
     @AppStorage("themeMode") private var themeMode = "system"
     @AppStorage("accentColor") private var accentColorName = "blue"
+    @AppStorage("uiDensity") private var uiDensity = "compact"
 
     let modelContainer: ModelContainer
 
@@ -35,6 +36,10 @@ struct ScreenMindApp: App {
         }
     }
 
+    private var isComfortable: Bool { uiDensity == "comfortable" }
+    private var listRowHeight: CGFloat { isComfortable ? 48 : 32 }
+    private var controlSize: ControlSize { isComfortable ? .regular : .small }
+
     var body: some Scene {
         // Menu bar popover — primary interface
         MenuBarExtra {
@@ -42,6 +47,8 @@ struct ScreenMindApp: App {
                 .modelContainer(modelContainer)
                 .preferredColorScheme(colorScheme)
                 .tint(tintColor)
+                .environment(\.defaultMinListRowHeight, listRowHeight)
+                .controlSize(controlSize)
         } label: {
             Image(systemName: "brain.head.profile")
         }
@@ -53,6 +60,8 @@ struct ScreenMindApp: App {
                 .modelContainer(modelContainer)
                 .preferredColorScheme(colorScheme)
                 .tint(tintColor)
+                .environment(\.defaultMinListRowHeight, listRowHeight)
+                .controlSize(controlSize)
         }
         .windowResizability(.contentSize)
         .defaultPosition(.center)
@@ -63,6 +72,8 @@ struct ScreenMindApp: App {
                 .modelContainer(modelContainer)
                 .preferredColorScheme(colorScheme)
                 .tint(tintColor)
+                .environment(\.defaultMinListRowHeight, listRowHeight)
+                .controlSize(controlSize)
         }
         .defaultSize(width: 900, height: 600)
         .defaultPosition(.center)
@@ -73,6 +84,8 @@ struct ScreenMindApp: App {
                 .modelContainer(modelContainer)
                 .preferredColorScheme(colorScheme)
                 .tint(tintColor)
+                .environment(\.defaultMinListRowHeight, listRowHeight)
+                .controlSize(controlSize)
         }
         .defaultSize(width: 1000, height: 700)
         .defaultPosition(.center)
@@ -83,6 +96,8 @@ struct ScreenMindApp: App {
                 .modelContainer(modelContainer)
                 .preferredColorScheme(colorScheme)
                 .tint(tintColor)
+                .environment(\.defaultMinListRowHeight, listRowHeight)
+                .controlSize(controlSize)
         }
         .defaultSize(width: 600, height: 500)
         .defaultPosition(.center)
@@ -93,6 +108,8 @@ struct ScreenMindApp: App {
                 .modelContainer(modelContainer)
                 .preferredColorScheme(colorScheme)
                 .tint(tintColor)
+                .environment(\.defaultMinListRowHeight, listRowHeight)
+                .controlSize(controlSize)
         }
         .defaultSize(width: 1100, height: 700)
         .defaultPosition(.center)
