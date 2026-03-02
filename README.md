@@ -120,6 +120,34 @@ Content Dedup → AI Analysis → Storage → Multi-Format Export
 - OCR result caching (LRU, 24h TTL) for performance
 - Screenshot storage quota enforcement (auto-cleanup at 1GB)
 
+### Audio Intelligence
+- **Voice memos** — `Cmd+Opt+Shift+V` to record, auto-transcribes on-device
+- **On-device speech recognition** — Apple Speech framework, 50+ languages, no cloud
+- **Meeting detection** — Calendar integration (EventKit) detects Zoom, Teams, Meet, Slack
+- **Voice Activity Detection** — Energy-based VAD filters silence from capture
+- Configurable language, VAD sensitivity, memo duration
+
+### Semantic Search & AI Chat
+- **Vector embeddings** — On-device via NaturalLanguage.framework (512-dim)
+- **Semantic search** — Find notes by meaning, not just keywords
+- **Natural language queries** — "What was I coding yesterday morning?"
+- **Chat with your notes** — RAG-powered AI chat window with conversation history
+- Auto-indexes every note (title + summary + details)
+
+### Knowledge Graph
+- **Auto-linking** — Discovers related notes via semantic similarity (>60%)
+- **Visual graph** — Force-directed layout with category color coding
+- **Interactive** — Pan, zoom, search, select nodes for details
+- **Project detection** — Auto-detects projects from Xcode/VS Code window titles
+- **Weekly summaries** — Stats: top apps, categories, tags, daily breakdown
+
+### Plugin System
+- **JavaScript plugins** — Sandboxed via JavaScriptCore
+- **6 lifecycle hooks** — onNoteCreated, onNoteSaved, onNoteExported, onAppStartup, onAppShutdown, onTimer
+- **MCP Server** — Claude Desktop / Cursor integration on localhost:9877
+- **Plugin management** — Settings tab with install/uninstall/configure
+- Safe APIs: `log()`, `fetch()` (with permission), `getEnv()`
+
 ### Developer Tools
 
 #### CLI (`screenmind-cli`)
@@ -142,7 +170,12 @@ GET /api/stats
 GET /api/apps
 GET /api/health
 ```
-Localhost-only. Works with Alfred, Raycast, Shortcuts, and scripts.
+
+#### MCP Server (localhost:9877)
+For Claude Desktop / Cursor integration:
+```json
+{"mcpServers": {"screenmind": {"url": "http://127.0.0.1:9877"}}}
+```
 
 ### System Integration
 - Global keyboard shortcuts:
@@ -151,10 +184,12 @@ Localhost-only. Works with Alfred, Raycast, Shortcuts, and scripts.
   - `Cmd+Shift+S` — Notes browser
   - `Cmd+Shift+T` — Timeline
   - `Cmd+Opt+Shift+C` — Manual capture
+  - `Cmd+Opt+Shift+V` — Voice memo
 - Spotlight indexing for system-wide search
 - Native macOS notifications
 - Battery-aware capture rate
 - Launch at login support
+- In-app update checker (GitHub Releases API)
 
 ## Installation
 
@@ -190,7 +225,7 @@ cp .build/release/screenmind-cli /usr/local/bin/
 
 ## Architecture
 
-ScreenMind is built as a clean Swift Package Manager project with 9 independent modules:
+ScreenMind is built as a clean Swift Package Manager project with 12 independent modules:
 
 ```
 ScreenMindApp            <- Main app (SwiftUI menu bar + windows)
@@ -200,7 +235,10 @@ ScreenMindApp            <- Main app (SwiftUI menu bar + windows)
   |   |- OCRProcessing       <- Apple Vision + redaction + LRU cache
   |   |- AIProcessing        <- Multi-provider AI + smart tags + shared prompts
   |   |- StorageCore         <- SwiftData + exporters + encryption + thumbnails
-  |   '- SystemIntegration   <- Shortcuts, Spotlight, notifications, power, API server
+  |   |- SystemIntegration   <- Shortcuts, Spotlight, notifications, power, API/MCP
+  |   |- AudioCore           <- Microphone capture, speech-to-text, voice memos
+  |   |- SemanticSearch      <- Vector embeddings, NL queries, RAG chat, knowledge graph
+  |   '- PluginSystem        <- JavaScriptCore plugin engine + lifecycle hooks
   '- Shared              <- Constants, logging, keychain, utilities
 ScreenMindCLI            <- CLI tool (search, export, stats)
 ```
@@ -215,10 +253,12 @@ All settings accessible from the menu bar > Settings:
 |-----|----------|
 | **General** | Launch at login, Obsidian vault path, data retention, disk usage, API server toggle |
 | **Capture** | Active/idle intervals, detection sensitivity, excluded apps |
+| **Audio** | Microphone toggle, VAD sensitivity, language, meeting detection, memo duration |
 | **AI** | Provider selection, API key, model, endpoint, temperature, rate limit |
 | **Export** | Enable/disable Obsidian, JSON, Markdown, Webhook + per-format config |
 | **Privacy** | Content redaction, custom patterns, skip rules, encryption, audit log |
 | **Stats** | Live CPU/RAM/battery gauges, pipeline throughput, processing times |
+| **Plugins** | Installed plugins, MCP server config, plugin development guide |
 
 ## Privacy
 
