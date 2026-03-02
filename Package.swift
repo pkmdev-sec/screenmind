@@ -31,6 +31,11 @@ let package = Package(
             path: "Sources/ChangeDetection"
         ),
         .target(
+            name: "AccessibilityExtraction",
+            dependencies: ["Shared"],
+            path: "Sources/AccessibilityExtraction"
+        ),
+        .target(
             name: "OCRProcessing",
             dependencies: ["Shared", "ChangeDetection"],
             path: "Sources/OCRProcessing"
@@ -53,6 +58,7 @@ let package = Package(
                 "Shared",
                 "CaptureCore",
                 "ChangeDetection",
+                "AccessibilityExtraction",
                 "OCRProcessing",
                 "AIProcessing",
                 "StorageCore",

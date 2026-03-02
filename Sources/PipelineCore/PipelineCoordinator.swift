@@ -2,6 +2,7 @@ import Foundation
 import Shared
 import CaptureCore
 import ChangeDetection
+import AccessibilityExtraction
 import OCRProcessing
 import AIProcessing
 import StorageCore
@@ -32,6 +33,7 @@ public actor PipelineCoordinator {
     private let captureActor: ScreenCaptureActor
     private let activityMonitor: ActivityMonitorActor
     private let changeDetector: ChangeDetectionActor
+    private let axExtractor = AccessibilityTreeExtractor()
     private let ocrProcessor: OCRProcessingActor
     private let aiProcessor: AIProcessingActor
     private let storageActor: StorageActor
@@ -43,6 +45,7 @@ public actor PipelineCoordinator {
     private let auditLogger = AuditLogger()
     private let resourceMonitor = ResourceMonitor.shared
     private let ocrCache = OCRCache()
+    private let hotFrameCache = HotFrameCache()
     private let meetingDetector = MeetingDetectionActor()
     private let semanticSearch = SemanticSearchActor()
     private let meetingSummarizer: MeetingSummarizer
@@ -279,30 +282,48 @@ public actor PipelineCoordinator {
             }
         }
 
-        // Stage 3: OCR (with cache)
+        // Stage 3: Text Extraction (Accessibility API first, OCR fallback)
         let recognizedText: RecognizedText
 
-        // Check OCR cache first — avoid re-processing visually similar frames
-        if let cached = await ocrCache.get(hash: significantFrame.hash) {
+        // Try accessibility tree extraction first (10x faster than OCR)
+        if let pid = frame.processIdentifier,
+           let axResult = axExtractor.extractText(from: pid),
+           axResult.text.split(separator: " ").count > 5 {
+            // Use AX result instead of OCR
             recognizedText = RecognizedText(
-                text: cached.text,
-                averageConfidence: cached.confidence,
-                wordCount: cached.wordCount,
-                processingTime: 0,
+                text: axResult.text,
+                averageConfidence: 1.0,  // AX extraction is 100% accurate (not OCR-based)
+                wordCount: axResult.text.split(separator: " ").count,
+                processingTime: axResult.extractionTime,
                 appName: frame.appName,
                 windowTitle: frame.windowTitle,
                 timestamp: frame.timestamp
             )
-            SMLogger.pipeline.debug("OCR cache hit for hash \(significantFrame.hash)")
+            SMLogger.pipeline.info("AX extraction: \(axResult.nodeCount) nodes in \(Int(axResult.extractionTime * 1000))ms")
         } else {
-            guard let ocrResult = await ocrProcessor.process(significantFrame) else {
-                SMLogger.pipeline.info("OCR returned no text")
-                return
+            // Fall back to OCR pipeline
+            // Check OCR cache first — avoid re-processing visually similar frames
+            if let cached = await ocrCache.get(hash: significantFrame.hash) {
+                recognizedText = RecognizedText(
+                    text: cached.text,
+                    averageConfidence: cached.confidence,
+                    wordCount: cached.wordCount,
+                    processingTime: 0,
+                    appName: frame.appName,
+                    windowTitle: frame.windowTitle,
+                    timestamp: frame.timestamp
+                )
+                SMLogger.pipeline.debug("OCR cache hit for hash \(significantFrame.hash)")
+            } else {
+                guard let ocrResult = await ocrProcessor.process(significantFrame) else {
+                    SMLogger.pipeline.info("OCR returned no text")
+                    return
+                }
+                recognizedText = ocrResult
+                await resourceMonitor.recordOCRComplete(timeMs: ocrResult.processingTime * 1000)
+                // Cache the result
+                await ocrCache.put(hash: significantFrame.hash, text: ocrResult.text, confidence: ocrResult.averageConfidence, wordCount: ocrResult.wordCount)
             }
-            recognizedText = ocrResult
-            await resourceMonitor.recordOCRComplete(timeMs: ocrResult.processingTime * 1000)
-            // Cache the result
-            await ocrCache.put(hash: significantFrame.hash, text: ocrResult.text, confidence: ocrResult.averageConfidence, wordCount: ocrResult.wordCount)
         }
 
         let textPreview = String(recognizedText.text.prefix(80))
@@ -377,6 +398,17 @@ public actor PipelineCoordinator {
                 await auditLogger.log(action: .encrypted, appName: frame.appName, reason: "Screenshot encrypted")
             }
             screenshotPath = path
+
+            // Insert into hot frame cache with thumbnail
+            let thumbnail = ThumbnailGenerator.generate(from: frame.image)
+            let cacheEntry = HotFrameCache.Entry(
+                timestamp: frame.timestamp,
+                appName: frame.appName,
+                windowTitle: frame.windowTitle,
+                thumbnailData: thumbnail,
+                hash: significantFrame.hash
+            )
+            await hotFrameCache.insert(cacheEntry)
         } catch {
             let msg = String(describing: error)
             SMLogger.pipeline.error("Screenshot save failed: \(msg, privacy: .public)")
