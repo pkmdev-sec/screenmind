@@ -396,6 +396,16 @@ public actor PipelineCoordinator {
                 "app": frame.appName
             ])
 
+            // Trigger workflow automations
+            await WorkflowEngine.shared.evaluate(event: WorkflowEvent(
+                title: generatedNote.title,
+                summary: generatedNote.summary,
+                category: generatedNote.category.rawValue,
+                appName: frame.appName,
+                tags: generatedNote.tags,
+                confidence: generatedNote.confidence
+            ))
+
             // Index for semantic search
             let indexText = "\(generatedNote.title) \(generatedNote.summary) \(generatedNote.details)"
             try? await semanticSearch.indexNote(noteID: savedNote.id.uuidString, text: indexText)

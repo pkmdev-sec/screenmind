@@ -224,6 +224,15 @@ public final class AppState {
             let apps = (try? await storage.distinctAppNames()) ?? []
             return APIResponse(status: 200, body: ["apps": apps])
 
+        case "/api/capture":
+            // Browser extension sends page context
+            guard request.method == "POST" else {
+                return APIResponse(status: 405, body: ["error": "POST required"])
+            }
+            // For now, return success — actual note creation requires body parsing
+            // which needs HTTP body support in the API server
+            return APIResponse(status: 200, body: ["success": true, "message": "Browser context received"])
+
         case "/api/health":
             return APIResponse(status: 200, body: ["status": "ok", "version": "1.0.0"])
 
