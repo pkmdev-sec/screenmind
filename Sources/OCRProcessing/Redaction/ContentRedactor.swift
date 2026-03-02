@@ -1,4 +1,5 @@
 import Foundation
+import NaturalLanguage
 import Shared
 
 /// Detects and redacts sensitive data from OCR text before AI processing.
@@ -10,6 +11,14 @@ public struct ContentRedactor: Sendable {
         public let text: String
         public let redactionCount: Int
         public let redactedTypes: [String]
+    }
+
+    /// PII detection sensitivity level.
+    public enum PIIDetectionLevel: String, Codable, Sendable {
+        case off        // No ML-based PII detection
+        case low        // Names only
+        case medium     // Names + places
+        case high       // Names + places + organizations + all PII
     }
 
     /// Built-in sensitive patterns.
@@ -65,6 +74,17 @@ public struct ContentRedactor: Sendable {
                 redactedText = result
                 totalRedactions += count
                 redactedTypes.append("custom:\(custom.name)")
+            }
+        }
+
+        // Apply ML-based PII detection (NaturalLanguage framework)
+        let piiLevel = getPIIDetectionLevel()
+        if piiLevel != .off {
+            let (result, count, types) = detectAndRedactPII(redactedText, level: piiLevel)
+            if count > 0 {
+                redactedText = result
+                totalRedactions += count
+                redactedTypes.append(contentsOf: types)
             }
         }
 
@@ -126,5 +146,75 @@ public struct ContentRedactor: Sendable {
     /// Validate that a regex pattern compiles.
     public static func validatePattern(_ pattern: String) -> Bool {
         (try? NSRegularExpression(pattern: pattern)) != nil
+    }
+
+    // MARK: - ML-Based PII Detection
+
+    /// Get PII detection level from UserDefaults.
+    private static func getPIIDetectionLevel() -> PIIDetectionLevel {
+        guard let levelString = UserDefaults.standard.string(forKey: "piiDetectionLevel") else {
+            return .off
+        }
+        return PIIDetectionLevel(rawValue: levelString) ?? .off
+    }
+
+    /// Detect and redact PII using NaturalLanguage framework.
+    private static func detectAndRedactPII(
+        _ text: String,
+        level: PIIDetectionLevel
+    ) -> (String, Int, [String]) {
+        let tagger = NLTagger(tagSchemes: [.nameType])
+        tagger.string = text
+
+        var redactedText = text
+        var redactionCount = 0
+        var redactedTypes: [String] = []
+
+        // Tags to detect based on level
+        var tagsToDetect: Set<NLTag> = []
+        switch level {
+        case .off:
+            return (text, 0, [])
+        case .low:
+            tagsToDetect = [.personalName]
+        case .medium:
+            tagsToDetect = [.personalName, .placeName]
+        case .high:
+            tagsToDetect = [.personalName, .placeName, .organizationName]
+        }
+
+        // Find all entities
+        var entitiesToRedact: [(range: Range<String.Index>, tag: NLTag)] = []
+
+        tagger.enumerateTags(in: text.startIndex..<text.endIndex, unit: .word, scheme: .nameType) { tag, range in
+            if let tag = tag, tagsToDetect.contains(tag) {
+                entitiesToRedact.append((range, tag))
+            }
+            return true
+        }
+
+        // Redact entities in reverse order to maintain string indices
+        for (range, tag) in entitiesToRedact.reversed() {
+            let tagName: String
+            switch tag {
+            case .personalName:
+                tagName = "ml-person-name"
+            case .placeName:
+                tagName = "ml-place-name"
+            case .organizationName:
+                tagName = "ml-org-name"
+            default:
+                tagName = "ml-unknown"
+            }
+
+            redactedText.replaceSubrange(range, with: "[REDACTED]")
+            redactionCount += 1
+
+            if !redactedTypes.contains(tagName) {
+                redactedTypes.append(tagName)
+            }
+        }
+
+        return (redactedText, redactionCount, redactedTypes)
     }
 }

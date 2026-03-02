@@ -20,6 +20,12 @@ public final class NoteModel: RatedNote {
     public var redactionCount: Int = 0
     public var userRating: Int? = nil // nil = unrated, 1 = up, -1 = down
 
+    // Encrypted note fields (optional, used when note encryption is enabled)
+    public var encryptedTitle: Data?
+    public var encryptedSummary: Data?
+    public var encryptedDetails: Data?
+    public var isEncrypted: Bool = false
+
     @Relationship(deleteRule: .cascade)
     public var screenshot: ScreenshotModel?
 

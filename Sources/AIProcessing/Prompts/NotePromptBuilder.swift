@@ -90,7 +90,9 @@ public enum NotePromptBuilder {
         lastNoteTitle: String?,
         lastNoteApp: String?,
         bundleID: String? = nil,
-        contextWindow: [(title: String, summary: String, timestamp: Date)] = []
+        contextWindow: [(title: String, summary: String, timestamp: Date)] = [],
+        uiElementCount: Int = 0,
+        hasChartLikeContent: Bool = false
     ) -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd HH:mm"
@@ -129,6 +131,17 @@ public enum NotePromptBuilder {
             prompt += "\n- Title: \(lastNoteTitle)"
             prompt += "\n- App: \(lastNoteApp)"
         }
+
+        // Add chart/diagram detection hint
+        if hasChartLikeContent {
+            prompt += "\n\nVisual context: This screenshot appears to contain charts, diagrams, or data visualizations."
+            prompt += "\nFocus on extracting:"
+            prompt += "\n- Chart type (line, bar, pie, scatter, etc.)"
+            prompt += "\n- Data trends or key insights"
+            prompt += "\n- Axis labels and units"
+            prompt += "\n- Notable data points or outliers"
+        }
+
         prompt += "\n\nScreen text:\n\(ocrText)"
         return prompt
     }
@@ -157,5 +170,29 @@ public enum NotePromptBuilder {
             .replacingOccurrences(of: "{window}", with: windowTitle ?? "")
             .replacingOccurrences(of: "{text}", with: ocrText)
             .replacingOccurrences(of: "{timestamp}", with: timestamp)
+    }
+
+    /// Detect if OCR text suggests chart/diagram content.
+    /// Heuristic: presence of numbers + axis-like terms + limited text.
+    public static func detectChartLikeContent(ocrText: String, uiElementCount: Int) -> Bool {
+        let text = ocrText.lowercased()
+        let words = text.split(separator: " ")
+
+        // Must have some UI elements (rectangles)
+        guard uiElementCount > 5 else { return false }
+
+        // Count numbers
+        let numberPattern = try? NSRegularExpression(pattern: #"\b\d+(?:\.\d+)?%?\b"#)
+        let numberCount = numberPattern?.numberOfMatches(
+            in: text,
+            range: NSRange(text.startIndex..., in: text)
+        ) ?? 0
+
+        // Check for chart-related terms
+        let chartTerms = ["chart", "graph", "data", "axis", "plot", "trend", "value", "percentage"]
+        let hasChartTerms = chartTerms.contains { text.contains($0) }
+
+        // Heuristic: lots of numbers, chart terms, and UI elements suggest a chart
+        return numberCount > 10 && hasChartTerms && words.count < 200
     }
 }
