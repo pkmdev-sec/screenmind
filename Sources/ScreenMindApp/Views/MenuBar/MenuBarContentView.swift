@@ -365,6 +365,7 @@ struct MenuBarContentView: View {
         }
     }
 
+    @MainActor
     private var statusColor: Color {
         if appState.configurationError != nil { return .orange }
         if !appState.isMonitoring { return .red }
@@ -379,6 +380,7 @@ struct MenuBarContentView: View {
         openWindow(id: id)
     }
 
+    @MainActor
     private var statusText: String {
         if let error = appState.configurationError { return error }
         if !appState.isMonitoring { return "Stopped" }

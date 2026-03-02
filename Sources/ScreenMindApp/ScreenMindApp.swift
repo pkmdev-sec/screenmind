@@ -9,6 +9,7 @@ import SystemIntegration
 
 /// ScreenMind — AI-Powered Screen Memory for macOS.
 @main
+@MainActor
 struct ScreenMindApp: App {
     @State private var appState = AppState()
 

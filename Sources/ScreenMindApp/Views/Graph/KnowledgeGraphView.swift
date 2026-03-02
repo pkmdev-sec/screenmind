@@ -198,9 +198,13 @@ struct KnowledgeGraphView: View {
         // Apply simple force-directed layout
         applyForceLayout(&graphNodes, edges: graphEdges, iterations: 50)
 
+        // Capture immutable copies before concurrent context
+        let finalNodes = graphNodes
+        let finalEdges = graphEdges
+
         await MainActor.run {
-            self.nodes = graphNodes
-            self.edges = graphEdges
+            self.nodes = finalNodes
+            self.edges = finalEdges
             self.isLoading = false
         }
     }
