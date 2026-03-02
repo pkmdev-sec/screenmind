@@ -21,6 +21,9 @@ public enum ExporterType: String, CaseIterable, Sendable, Codable {
     case json = "JSON"
     case flatMarkdown = "Flat Markdown"
     case webhook = "Webhook"
+    case notion = "Notion"
+    case logseq = "Logseq"
+    case slack = "Slack"
 
     /// SF Symbol icon.
     public var iconName: String {
@@ -29,6 +32,9 @@ public enum ExporterType: String, CaseIterable, Sendable, Codable {
         case .json: return "curlybraces"
         case .flatMarkdown: return "doc.text"
         case .webhook: return "arrow.up.forward.app"
+        case .notion: return "note.text"
+        case .logseq: return "square.stack.3d.up"
+        case .slack: return "bubble.left.and.bubble.right"
         }
     }
 
@@ -39,6 +45,9 @@ public enum ExporterType: String, CaseIterable, Sendable, Codable {
         case .json: return "One JSON file per note for data pipelines"
         case .flatMarkdown: return "Simple .md files without vault structure"
         case .webhook: return "POST note data to a URL"
+        case .notion: return "Export to Notion database via API"
+        case .logseq: return "Logseq journal format with block properties"
+        case .slack: return "Send note summaries to Slack channel"
         }
     }
 
@@ -75,6 +84,24 @@ public enum ExporterFactory {
             if let url = UserDefaults.standard.string(forKey: "exportWebhookURL"), !url.isEmpty {
                 let headers = UserDefaults.standard.dictionary(forKey: "exportWebhookHeaders") as? [String: String] ?? [:]
                 exporters.append(WebhookExporter(webhookURL: url, headers: headers))
+            }
+        }
+
+        if UserDefaults.standard.bool(forKey: ExporterType.notion.enabledKey) {
+            if let exporter = NotionExporter() {
+                exporters.append(exporter)
+            }
+        }
+
+        if UserDefaults.standard.bool(forKey: ExporterType.logseq.enabledKey) {
+            if let exporter = LogseqExporter() {
+                exporters.append(exporter)
+            }
+        }
+
+        if UserDefaults.standard.bool(forKey: ExporterType.slack.enabledKey) {
+            if let exporter = SlackExporter() {
+                exporters.append(exporter)
             }
         }
 

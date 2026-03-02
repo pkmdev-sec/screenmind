@@ -15,20 +15,26 @@ public struct ScreenshotFileManager: Sendable {
             .appendingPathComponent(AppConstants.Storage.screenshotDirectory)
     }
 
-    /// Save a CGImage as JPEG to disk. Returns the file path.
+    /// Save a CGImage to disk in JPEG or HEIF format. Returns the file path.
     public func save(_ image: CGImage, hash: UInt64, timestamp: Date) throws -> String {
         let folder = baseDirectory.appendingPathComponent(timestamp.dateFolderName)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
 
-        let filename = "\(Int(timestamp.timeIntervalSince1970))-\(hash).jpg"
+        // Get format and quality from UserDefaults
+        let format = UserDefaults.standard.string(forKey: "screenshotFormat") ?? "jpeg"
+        let quality = UserDefaults.standard.double(forKey: "screenshotQuality")
+        let qualityValue = quality > 0 ? quality : (format == "heif" ? 0.5 : 0.6)
+
+        let (utType, ext) = format == "heif" ? (UTType.heif, "heic") : (UTType.jpeg, "jpg")
+        let filename = "\(Int(timestamp.timeIntervalSince1970))-\(hash).\(ext)"
         let fileURL = folder.appendingPathComponent(filename)
 
-        guard let destination = CGImageDestinationCreateWithURL(fileURL as CFURL, UTType.jpeg.identifier as CFString, 1, nil) else {
+        guard let destination = CGImageDestinationCreateWithURL(fileURL as CFURL, utType.identifier as CFString, 1, nil) else {
             throw ScreenshotError.createFailed
         }
 
         let options: [CFString: Any] = [
-            kCGImageDestinationLossyCompressionQuality: 0.6
+            kCGImageDestinationLossyCompressionQuality: qualityValue as CFNumber
         ]
         CGImageDestinationAddImage(destination, image, options as CFDictionary)
 
@@ -75,7 +81,7 @@ public struct ScreenshotFileManager: Sendable {
                 guard let values = try? url.resourceValues(forKeys: [.fileSizeKey, .creationDateKey]),
                       let size = values.fileSize,
                       let date = values.creationDate,
-                      url.pathExtension == "jpg" || url.pathExtension == "enc" else { continue }
+                      ["jpg", "heic", "enc"].contains(url.pathExtension) else { continue }
                 files.append((url: url, date: date, size: Int64(size)))
             }
         }

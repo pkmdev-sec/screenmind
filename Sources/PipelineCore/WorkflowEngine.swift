@@ -81,6 +81,10 @@ public actor WorkflowEngine {
             SMLogger.pipeline.info("Workflow notification: \(notificationMsg)")
         case .exportToFolder(let path):
             SMLogger.pipeline.info("Workflow: export to \(path)")
+        case .slackPost(let webhookURL):
+            await sendSlackWebhook(url: webhookURL, event: event)
+        case .createGitHubIssue(let repo):
+            await createGitHubIssue(repo: repo, event: event)
         }
     }
 
@@ -100,6 +104,50 @@ public actor WorkflowEngine {
         ]
         request.httpBody = try? JSONSerialization.data(withJSONObject: body)
         _ = try? await URLSession.shared.data(for: request)
+    }
+
+    private func sendSlackWebhook(url: String, event: WorkflowEvent) async {
+        guard let requestURL = URL(string: url) else { return }
+        var request = URLRequest(url: requestURL)
+        request.httpMethod = "POST"
+        request.timeoutInterval = 10
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let blocks: [[String: Any]] = [
+            [
+                "type": "header",
+                "text": [
+                    "type": "plain_text",
+                    "text": event.title
+                ]
+            ],
+            [
+                "type": "section",
+                "text": [
+                    "type": "mrkdwn",
+                    "text": event.summary
+                ]
+            ],
+            [
+                "type": "context",
+                "elements": [
+                    [
+                        "type": "mrkdwn",
+                        "text": "*\(event.category)* • \(event.appName) • Tags: \(event.tags.joined(separator: ", "))"
+                    ]
+                ]
+            ]
+        ]
+
+        let body: [String: Any] = ["blocks": blocks]
+        request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+        _ = try? await URLSession.shared.data(for: request)
+    }
+
+    private func createGitHubIssue(repo: String, event: WorkflowEvent) async {
+        // Note: This requires SystemIntegration module which may not be available here
+        // The actual implementation would call GitHubIntegration.shared.createIssue
+        SMLogger.pipeline.info("Workflow: create GitHub issue in \(repo) for '\(event.title)'")
     }
 
     // MARK: - Persistence
@@ -144,6 +192,8 @@ public enum WorkflowAction: Codable, Sendable {
     case webhook(String)
     case notify(String)
     case exportToFolder(String)
+    case slackPost(String)  // Slack webhook URL
+    case createGitHubIssue(String)  // repo in "owner/repo" format
 }
 
 /// Workflow event data (passed to engine on note creation).

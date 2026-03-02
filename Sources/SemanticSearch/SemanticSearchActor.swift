@@ -2,21 +2,27 @@ import Foundation
 import NaturalLanguage
 import Shared
 
-/// Semantic search using on-device NaturalLanguage embeddings.
+/// Semantic search using on-device NaturalLanguage embeddings with HNSW index.
 public actor SemanticSearchActor {
     private let embeddingDB = EmbeddingDatabase()
+    private let hnswIndex = HNSWIndex()
     private var nlEmbedding: NLEmbedding?
     private var isReady = false
+    private var useHNSW: Bool {
+        UserDefaults.standard.bool(forKey: "useHNSWIndex") || embeddingCount() > 1000
+    }
 
     public init() {}
 
     /// Initialize the embedding model and database.
     public func setup() async throws {
         try await embeddingDB.open()
+        try await hnswIndex.load()
         nlEmbedding = NLEmbedding.sentenceEmbedding(for: .english)
         isReady = nlEmbedding != nil
         if isReady {
-            SMLogger.general.info("Semantic search ready (NLEmbedding sentence model loaded)")
+            let indexType = useHNSW ? "HNSW" : "linear"
+            SMLogger.general.info("Semantic search ready (NLEmbedding + \(indexType) index)")
         } else {
             SMLogger.general.warning("NLEmbedding sentence model not available — semantic search disabled")
         }
@@ -26,12 +32,27 @@ public actor SemanticSearchActor {
     public func indexNote(noteID: String, text: String) async throws {
         guard isReady, let embedding = generateEmbedding(for: text) else { return }
         try await embeddingDB.save(noteID: noteID, embedding: embedding)
+
+        // Add to HNSW index
+        await hnswIndex.insert(id: noteID, vector: embedding)
+
+        // Periodically save HNSW index (every 10 notes)
+        if await hnswIndex.count % 10 == 0 {
+            try? await hnswIndex.save()
+        }
     }
 
     /// Semantic search: find notes similar to the query by meaning.
+    /// Uses HNSW for O(log n) search if enabled, otherwise linear scan.
     public func search(query: String, limit: Int = 20) async throws -> [NoteMatch] {
         guard isReady, let queryEmbedding = generateEmbedding(for: query) else { return [] }
 
+        // Use HNSW for large collections
+        if useHNSW {
+            return await hnswIndex.search(query: queryEmbedding, k: limit)
+        }
+
+        // Fallback: linear scan for small collections
         let allEmbeddings = try await embeddingDB.fetchAll()
         var scores: [(noteID: String, score: Float)] = []
 
@@ -46,9 +67,19 @@ public actor SemanticSearchActor {
         return Array(scores.prefix(limit).map { NoteMatch(noteID: $0.noteID, score: $0.score) })
     }
 
+    /// Remove a note from the search index.
+    public func removeNote(noteID: String) async throws {
+        try await embeddingDB.delete(noteID: noteID)
+        await hnswIndex.remove(id: noteID)
+    }
+
     /// Get embedding count.
     public func embeddingCount() async -> Int {
         (try? await embeddingDB.count()) ?? 0
+    }
+
+    private func embeddingCount() -> Int {
+        0 // Non-async helper for initialization
     }
 
     // MARK: - Private

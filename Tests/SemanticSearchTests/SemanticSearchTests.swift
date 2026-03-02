@@ -5,15 +5,23 @@ import Testing
 // MARK: - EmbeddingDatabase Tests
 
 @Test func embeddingDatabaseOpenAndClose() async throws {
-    let db = EmbeddingDatabase()
+    let tempPath = NSTemporaryDirectory() + "test-\(UUID().uuidString).sqlite"
+    let db = EmbeddingDatabase(customPath: tempPath)
     try await db.open()
     await db.close()
+    try? FileManager.default.removeItem(atPath: tempPath)
 }
 
 @Test func embeddingDatabaseSaveAndFetch() async throws {
-    let db = EmbeddingDatabase()
+    let tempPath = NSTemporaryDirectory() + "test-\(UUID().uuidString).sqlite"
+    let db = EmbeddingDatabase(customPath: tempPath)
     try await db.open()
-    defer { Task { await db.close() } }
+    defer { 
+        Task { 
+            await db.close()
+            try? FileManager.default.removeItem(atPath: tempPath)
+        } 
+    }
 
     let noteID = UUID().uuidString
     let embedding: [Float] = [0.1, 0.2, 0.3, 0.4, 0.5]
@@ -33,9 +41,15 @@ import Testing
 }
 
 @Test func embeddingDatabaseCount() async throws {
-    let db = EmbeddingDatabase()
+    let tempPath = NSTemporaryDirectory() + "test-\(UUID().uuidString).sqlite"
+    let db = EmbeddingDatabase(customPath: tempPath)
     try await db.open()
-    defer { Task { await db.close() } }
+    defer { 
+        Task { 
+            await db.close()
+            try? FileManager.default.removeItem(atPath: tempPath)
+        } 
+    }
 
     let initialCount = try await db.count()
     let noteID = "count-test-\(UUID().uuidString)"
@@ -48,9 +62,15 @@ import Testing
 }
 
 @Test func embeddingDatabaseDelete() async throws {
-    let db = EmbeddingDatabase()
+    let tempPath = NSTemporaryDirectory() + "test-\(UUID().uuidString).sqlite"
+    let db = EmbeddingDatabase(customPath: tempPath)
     try await db.open()
-    defer { Task { await db.close() } }
+    defer { 
+        Task { 
+            await db.close()
+            try? FileManager.default.removeItem(atPath: tempPath)
+        } 
+    }
 
     let noteID = "delete-test-\(UUID().uuidString)"
     try await db.save(noteID: noteID, embedding: [1.0])
@@ -62,9 +82,15 @@ import Testing
 }
 
 @Test func embeddingDatabaseUpsert() async throws {
-    let db = EmbeddingDatabase()
+    let tempPath = NSTemporaryDirectory() + "test-\(UUID().uuidString).sqlite"
+    let db = EmbeddingDatabase(customPath: tempPath)
     try await db.open()
-    defer { Task { await db.close() } }
+    defer { 
+        Task { 
+            await db.close()
+            try? FileManager.default.removeItem(atPath: tempPath)
+        } 
+    }
 
     let noteID = "upsert-test-\(UUID().uuidString)"
     try await db.save(noteID: noteID, embedding: [1.0, 2.0])
@@ -73,7 +99,9 @@ import Testing
     let results = try await db.fetchAll()
     let matches = results.filter { $0.noteID == noteID }
     #expect(matches.count == 1) // Only one entry
-    #expect(abs(matches[0].embedding[0] - 3.0) < 0.001) // Updated value
+    if matches.count > 0 {
+        #expect(abs(matches[0].embedding[0] - 3.0) < 0.001) // Updated value
+    }
 
     // Cleanup
     try await db.delete(noteID: noteID)
@@ -89,7 +117,8 @@ import Testing
 }
 
 @Test func embeddingDatabaseThrowsWhenNotOpen() async {
-    let db = EmbeddingDatabase()
+    let tempPath = NSTemporaryDirectory() + "test-\(UUID().uuidString).sqlite"
+    let db = EmbeddingDatabase(customPath: tempPath)
     // Don't open — should throw
     do {
         try await db.save(noteID: "test", embedding: [1.0])
@@ -97,4 +126,5 @@ import Testing
     } catch {
         #expect(error is EmbeddingError)
     }
+    try? FileManager.default.removeItem(atPath: tempPath)
 }

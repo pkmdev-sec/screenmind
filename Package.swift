@@ -92,6 +92,13 @@ let package = Package(
             path: "Sources/SystemIntegration"
         ),
 
+        // MARK: - Test Utilities
+        .target(
+            name: "TestUtilities",
+            dependencies: ["AIProcessing"],
+            path: "Sources/TestUtilities"
+        ),
+
         // MARK: - Main App
         .executableTarget(
             name: "ScreenMindApp",
@@ -161,8 +168,23 @@ let package = Package(
         ),
         .testTarget(
             name: "SystemIntegrationTests",
-            dependencies: ["SystemIntegration"],
+            dependencies: ["SystemIntegration", "TestUtilities"],
             path: "Tests/SystemIntegrationTests"
+        ),
+        .testTarget(
+            name: "AudioCoreTests",
+            dependencies: ["AudioCore"],
+            path: "Tests/AudioCoreTests"
+        ),
+        .testTarget(
+            name: "SemanticSearchTests",
+            dependencies: ["SemanticSearch"],
+            path: "Tests/SemanticSearchTests"
+        ),
+        .testTarget(
+            name: "PluginSystemTests",
+            dependencies: ["PluginSystem"],
+            path: "Tests/PluginSystemTests"
         ),
     ]
 )

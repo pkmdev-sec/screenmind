@@ -1,5 +1,6 @@
 import Foundation
 import LocalAuthentication
+import CryptoKit
 import Shared
 
 /// Manages vault lock state with Touch ID/password authentication and auto-lock.
@@ -228,17 +229,16 @@ public actor VaultLockManager {
     // MARK: - Password Hashing
 
     private func hashPassword(_ password: String) async throws -> String {
-        // Delegate to NoteEncryptor for consistent hashing
         return try await Task.detached {
-            // Import at runtime to avoid circular dependency
-            try StorageCore.NoteEncryptor.hashPassword(password)
+            let data = Data(password.utf8)
+            let hash = SHA256.hash(data: data)
+            return hash.compactMap { String(format: "%02x", $0) }.joined()
         }.value
     }
 
     private func verifyPasswordHash(_ password: String, storedHash: String) async throws -> Bool {
-        return try await Task.detached {
-            try StorageCore.NoteEncryptor.verifyPassword(password, hash: storedHash)
-        }.value
+        let computed = try await hashPassword(password)
+        return computed == storedHash
     }
 }
 
@@ -277,7 +277,3 @@ extension Int {
         self == 0 ? defaultValue : self
     }
 }
-
-// MARK: - StorageCore Import (indirect)
-
-import StorageCore

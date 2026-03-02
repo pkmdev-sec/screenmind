@@ -7,14 +7,22 @@ public actor EmbeddingDatabase {
     private var db: OpaquePointer?
     private let dbPath: String
 
-    public init() {
-        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        let dir = appSupport.appendingPathComponent(AppConstants.bundleIdentifier)
-        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        self.dbPath = dir.appendingPathComponent("embeddings.sqlite").path
+    public init(customPath: String? = nil) {
+        if let customPath = customPath {
+            self.dbPath = customPath
+        } else {
+            let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+            let dir = appSupport.appendingPathComponent(AppConstants.bundleIdentifier)
+            try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+            self.dbPath = dir.appendingPathComponent("embeddings.sqlite").path
+        }
     }
 
     public func open() throws {
+        // Ensure parent directory exists
+        let parentDir = URL(fileURLWithPath: dbPath).deletingLastPathComponent()
+        try? FileManager.default.createDirectory(at: parentDir, withIntermediateDirectories: true)
+        
         guard sqlite3_open(dbPath, &db) == SQLITE_OK else {
             throw EmbeddingError.databaseOpenFailed
         }
@@ -41,10 +49,11 @@ public actor EmbeddingDatabase {
         }
         defer { sqlite3_finalize(stmt) }
 
-        sqlite3_bind_text(stmt, 1, noteID, -1, nil)
+        let transient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+        sqlite3_bind_text(stmt, 1, noteID, -1, transient)
         let data = embedding.withUnsafeBufferPointer { Data(buffer: $0) }
         _ = data.withUnsafeBytes { ptr in
-            sqlite3_bind_blob(stmt, 2, ptr.baseAddress, Int32(data.count), nil)
+            sqlite3_bind_blob(stmt, 2, ptr.baseAddress, Int32(data.count), transient)
         }
         sqlite3_bind_int64(stmt, 3, 0)
         sqlite3_bind_double(stmt, 4, Date.now.timeIntervalSince1970)
@@ -84,7 +93,8 @@ public actor EmbeddingDatabase {
         var stmt: OpaquePointer?
         guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return }
         defer { sqlite3_finalize(stmt) }
-        sqlite3_bind_text(stmt, 1, noteID, -1, nil)
+        let transient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+        sqlite3_bind_text(stmt, 1, noteID, -1, transient)
         sqlite3_step(stmt)
     }
 
