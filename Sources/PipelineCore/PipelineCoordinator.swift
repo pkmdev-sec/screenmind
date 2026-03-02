@@ -48,6 +48,11 @@ public actor PipelineCoordinator {
     private let meetingSummarizer: MeetingSummarizer
     private let onNoteSaved: (@Sendable (String, String) -> Void)?
 
+    // Audio actors
+    private var micCapture: MicrophoneCaptureActor?
+    private var systemAudioCapture: SystemAudioCaptureActor?
+    private var speechRecognizer: SpeechRecognitionActor?
+
     public init(
         captureConfig: CaptureConfiguration = CaptureConfiguration(),
         aiProvider: any AIProvider,
@@ -101,6 +106,9 @@ public actor PipelineCoordinator {
         if UserDefaults.standard.object(forKey: "audioMeetingDetection") as? Bool ?? true {
             _ = await meetingDetector.requestAccess()
         }
+
+        // Initialize audio capture based on settings
+        try? await initializeAudio()
 
         // Start power profile management
         await powerProfileManager.start()
@@ -174,6 +182,7 @@ public actor PipelineCoordinator {
         await activityMonitor.stopMonitoring()
         await screenLockMonitor.stopMonitoring()
         await powerProfileManager.stop()
+        await stopAudio()
 
         // Write daily summary on stop
         do {
@@ -597,6 +606,60 @@ public actor PipelineCoordinator {
                 SMLogger.pipeline.debug("Power profile: \(mode.rawValue)")
             }
         }
+    }
+
+    // MARK: - Audio Initialization
+
+    /// Initialize audio capture actors based on user settings.
+    private func initializeAudio() async throws {
+        let micEnabled = UserDefaults.standard.bool(forKey: "audioMicrophoneEnabled")
+        let systemEnabled = UserDefaults.standard.bool(forKey: "audioSystemEnabled")
+        let language = UserDefaults.standard.string(forKey: "audioLanguage") ?? "en-US"
+        let vadSensitivity = UserDefaults.standard.double(forKey: "audioVADSensitivity")
+        let vadValue = vadSensitivity > 0 ? vadSensitivity : 0.5
+
+        // Initialize microphone capture
+        if micEnabled {
+            SMLogger.pipeline.info("Starting microphone capture with VAD sensitivity \(vadValue)")
+            let mic = MicrophoneCaptureActor(vadSensitivity: vadValue)
+            self.micCapture = mic
+            let recognizer = SpeechRecognitionActor(language: language)
+            self.speechRecognizer = recognizer
+
+            // Start capturing with speech recognition callback
+            try await mic.start { buffer in
+                // Handle speech detection if needed
+                // For now, just log that we got audio
+                Task {
+                    SMLogger.pipeline.debug("Microphone: speech detected")
+                }
+            }
+        }
+
+        // Initialize system audio capture
+        if systemEnabled {
+            SMLogger.pipeline.info("Starting system audio capture")
+            let sysAudio = SystemAudioCaptureActor()
+            self.systemAudioCapture = sysAudio
+            try await sysAudio.startCapture()
+        }
+
+        if micEnabled || systemEnabled {
+            SMLogger.pipeline.info("Audio capture initialized (mic: \(micEnabled), system: \(systemEnabled))")
+        }
+    }
+
+    /// Stop all audio capture.
+    private func stopAudio() async {
+        if let mic = micCapture {
+            await mic.stop()
+            micCapture = nil
+        }
+        if let sysAudio = systemAudioCapture {
+            await sysAudio.stopCapture()
+            systemAudioCapture = nil
+        }
+        speechRecognizer = nil
     }
 
     // MARK: - Meeting Detection

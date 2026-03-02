@@ -8,6 +8,9 @@ struct CaptureSettingsView: View {
     @AppStorage("detectionThreshold") private var threshold = AppConstants.Detection.defaultThreshold
     @AppStorage("excludedApps") private var excludedAppsString = ""
     @AppStorage("pauseDuringFocus") private var pauseDuringFocus = false
+    @AppStorage("eventDrivenCaptureEnabled") private var eventDrivenEnabled = true
+    @AppStorage("powerProfileAutoSwitch") private var powerAutoSwitch = true
+    @AppStorage("powerProfileManual") private var powerProfile = "performance"
 
     @State private var newExcludedApp = ""
 
@@ -17,6 +20,21 @@ struct CaptureSettingsView: View {
 
     var body: some View {
         Form {
+            Section("Capture Mode") {
+                Toggle("Event-Driven Capture", isOn: $eventDrivenEnabled)
+                    .help("Capture on meaningful events (app switch, typing pause) instead of fixed intervals")
+
+                if eventDrivenEnabled {
+                    Text("Captures triggered by app switches, typing pauses, scroll stops, and clipboard changes")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text("Using timer-based capture at regular intervals")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
             Section("Capture Intervals") {
                 HStack {
                     Text("When active:")
@@ -24,6 +42,7 @@ struct CaptureSettingsView: View {
                     Stepper("\(Int(activeInterval))s", value: $activeInterval, in: 1...60, step: 1)
                         .frame(width: 100)
                 }
+                .disabled(eventDrivenEnabled)
 
                 HStack {
                     Text("When idle:")
@@ -31,12 +50,13 @@ struct CaptureSettingsView: View {
                     Stepper("\(Int(idleInterval))s", value: $idleInterval, in: 10...300, step: 10)
                         .frame(width: 100)
                 }
+                .disabled(eventDrivenEnabled)
 
                 HStack(spacing: 6) {
-                    Image(systemName: "bolt.fill")
-                        .foregroundStyle(.yellow)
+                    Image(systemName: eventDrivenEnabled ? "info.circle" : "bolt.fill")
+                        .foregroundStyle(eventDrivenEnabled ? .blue : .yellow)
                         .font(.system(size: 11))
-                    Text("Lower intervals = more notes but higher battery usage")
+                    Text(eventDrivenEnabled ? "Intervals only apply in timer-based mode" : "Lower intervals = more notes but higher battery usage")
                         .font(.system(size: 11))
                         .foregroundStyle(.secondary)
                 }
@@ -122,8 +142,40 @@ struct CaptureSettingsView: View {
                         .foregroundStyle(.secondary)
                 }
             }
+
+            Section("Power Profile") {
+                Toggle("Auto-adjust for battery", isOn: $powerAutoSwitch)
+                    .help("Reduce capture rate on battery to extend battery life")
+
+                if !powerAutoSwitch {
+                    Picker("Profile", selection: $powerProfile) {
+                        Text("Performance").tag("performance")
+                        Text("Balanced").tag("balanced")
+                        Text("Power Saver").tag("saver")
+                    }
+                    .pickerStyle(.segmented)
+                }
+
+                HStack(spacing: 6) {
+                    Image(systemName: "battery.75percent")
+                        .foregroundStyle(.green)
+                        .font(.system(size: 12))
+                    Text(powerAutoSwitch ? "System will automatically switch between Performance (AC), Balanced (battery >40%), and Power Saver (battery ≤40% or thermal)" : "Manual profile: \(profileDescription)")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                }
+            }
         }
         .formStyle(.grouped)
         .padding()
+    }
+
+    private var profileDescription: String {
+        switch powerProfile {
+        case "performance": return "Performance — full speed (200ms debounce, 3s visual check)"
+        case "balanced": return "Balanced — moderate (500ms debounce, 10s visual check)"
+        case "saver": return "Power Saver — slow (1s debounce, 30s visual check)"
+        default: return ""
+        }
     }
 }

@@ -12,14 +12,36 @@ import SystemIntegration
 @MainActor
 struct ScreenMindApp: App {
     @State private var appState = AppState()
+    @AppStorage("themeMode") private var themeMode = "system"
+    @AppStorage("accentColor") private var accentColorName = "blue"
 
     let modelContainer: ModelContainer
+
+    private var colorScheme: ColorScheme? {
+        switch themeMode {
+        case "light": return .light
+        case "dark": return .dark
+        default: return nil  // system
+        }
+    }
+
+    private var tintColor: Color {
+        switch accentColorName {
+        case "purple": return .purple
+        case "green": return .green
+        case "orange": return .orange
+        case "pink": return .pink
+        default: return .blue
+        }
+    }
 
     var body: some Scene {
         // Menu bar popover — primary interface
         MenuBarExtra {
             MenuBarContentView(appState: appState, modelContainer: modelContainer)
                 .modelContainer(modelContainer)
+                .preferredColorScheme(colorScheme)
+                .tint(tintColor)
         } label: {
             Image(systemName: "brain.head.profile")
         }
@@ -29,6 +51,8 @@ struct ScreenMindApp: App {
         Window("ScreenMind Settings", id: "settings") {
             SettingsView()
                 .modelContainer(modelContainer)
+                .preferredColorScheme(colorScheme)
+                .tint(tintColor)
         }
         .windowResizability(.contentSize)
         .defaultPosition(.center)
@@ -37,6 +61,8 @@ struct ScreenMindApp: App {
         Window("Notes Browser", id: "notes-browser") {
             NotesBrowserView()
                 .modelContainer(modelContainer)
+                .preferredColorScheme(colorScheme)
+                .tint(tintColor)
         }
         .defaultSize(width: 900, height: 600)
         .defaultPosition(.center)
@@ -45,6 +71,8 @@ struct ScreenMindApp: App {
         Window("Timeline", id: "timeline") {
             TimelineView()
                 .modelContainer(modelContainer)
+                .preferredColorScheme(colorScheme)
+                .tint(tintColor)
         }
         .defaultSize(width: 1000, height: 700)
         .defaultPosition(.center)
@@ -53,6 +81,8 @@ struct ScreenMindApp: App {
         Window("Chat with Notes", id: "chat") {
             ChatView()
                 .modelContainer(modelContainer)
+                .preferredColorScheme(colorScheme)
+                .tint(tintColor)
         }
         .defaultSize(width: 600, height: 500)
         .defaultPosition(.center)
@@ -61,6 +91,8 @@ struct ScreenMindApp: App {
         Window("Knowledge Graph", id: "graph") {
             KnowledgeGraphView()
                 .modelContainer(modelContainer)
+                .preferredColorScheme(colorScheme)
+                .tint(tintColor)
         }
         .defaultSize(width: 1100, height: 700)
         .defaultPosition(.center)
@@ -69,6 +101,8 @@ struct ScreenMindApp: App {
         Window("Welcome to ScreenMind", id: "onboarding") {
             OnboardingView()
                 .modelContainer(modelContainer)
+                .preferredColorScheme(colorScheme)
+                .tint(tintColor)
         }
         .windowResizability(.contentSize)
         .windowStyle(.hiddenTitleBar)

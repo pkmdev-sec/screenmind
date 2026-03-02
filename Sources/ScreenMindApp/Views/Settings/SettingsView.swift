@@ -15,6 +15,16 @@ struct SettingsView: View {
                     Label("Capture", systemImage: "camera.fill")
                 }
 
+            EventTriggersSettingsView()
+                .tabItem {
+                    Label("Events", systemImage: "bolt.fill")
+                }
+
+            PowerSettingsView()
+                .tabItem {
+                    Label("Power", systemImage: "battery.75percent")
+                }
+
             AudioSettingsView()
                 .tabItem {
                     Label("Audio", systemImage: "waveform")
@@ -23,6 +33,11 @@ struct SettingsView: View {
             AISettingsView()
                 .tabItem {
                     Label("AI", systemImage: "brain")
+                }
+
+            SearchSettingsView()
+                .tabItem {
+                    Label("Search", systemImage: "magnifyingglass")
                 }
 
             ExportSettingsView()

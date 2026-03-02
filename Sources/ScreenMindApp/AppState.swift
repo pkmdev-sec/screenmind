@@ -41,6 +41,11 @@ public final class AppState {
             return
         }
 
+        // Start API server if enabled
+        if UserDefaults.standard.bool(forKey: "apiServerEnabled") {
+            startAPIServer()
+        }
+
         SMLogger.general.info("Configuring AI provider...")
 
         // Build provider from settings (supports Claude, OpenAI, Ollama, Gemini, Custom)

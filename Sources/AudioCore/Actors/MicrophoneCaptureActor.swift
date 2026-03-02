@@ -18,7 +18,7 @@ public actor MicrophoneCaptureActor {
     }
 
     /// Start capturing microphone audio.
-    public func start(onSpeech: @escaping (AVAudioPCMBuffer) -> Void) throws {
+    public func start(onSpeech: @escaping (AVAudioPCMBuffer) -> Void) async throws {
         guard !isCapturing else { return }
 
         let engine = AVAudioEngine()

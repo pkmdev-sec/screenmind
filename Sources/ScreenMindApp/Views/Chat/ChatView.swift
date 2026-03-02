@@ -1,12 +1,16 @@
 import SwiftUI
+import SwiftData
 import SemanticSearch
+import AIProcessing
 import Shared
 
 /// Chat with your notes using RAG (Retrieval-Augmented Generation).
 struct ChatView: View {
+    @Environment(\.modelContext) private var modelContext
     @State private var messages: [ChatMessage] = []
     @State private var inputText = ""
     @State private var isProcessing = false
+    @State private var errorMessage: String?
     @FocusState private var isInputFocused: Bool
 
     var body: some View {
@@ -161,26 +165,59 @@ struct ChatView: View {
 
         messages.append(ChatMessage(role: .user, content: query))
         isProcessing = true
+        errorMessage = nil
 
         Task {
-            // Parse NL query for context
-            let filter = NLQueryParser.parse(query)
+            do {
+                // Initialize semantic search and chat actor
+                let semanticSearch = SemanticSearchActor()
+                try? await semanticSearch.setup()
+                let chatActor = ChatActor(semanticSearch: semanticSearch)
 
-            // For now, add a placeholder response.
-            // In production, this would call ChatActor -> SemanticSearch -> AIProvider
-            let response = """
-            I searched your notes for "\(filter.semanticQuery.isEmpty ? query : filter.semanticQuery)"\
-            \(filter.dateRange != nil ? " with date filter" : "")\
-            \(filter.category != nil ? " in category: \(filter.category!)" : "").
+                // Get RAG response with context from notes
+                let chatResponse = try await chatActor.ask(question: query, modelContainer: modelContext.container)
 
-            [Semantic search is active — connect an AI provider in Settings > AI to get intelligent answers from your notes.]
-            """
+                // Check if AI provider is configured
+                guard let aiProvider = AIProviderFactory.createProvider() else {
+                    await MainActor.run {
+                        let providerType = UserDefaults.standard.string(forKey: "aiProviderType") ?? "Claude"
+                        messages.append(ChatMessage(role: .assistant, content: """
+                        I found \(chatResponse.sourcesCount) relevant notes, but I need an AI provider to generate an answer.
 
-            try? await Task.sleep(for: .milliseconds(500))
+                        Please configure \(providerType) API key in Settings > AI to enable chat.
+                        """))
+                        isProcessing = false
+                    }
+                    return
+                }
 
-            await MainActor.run {
-                messages.append(ChatMessage(role: .assistant, content: response))
-                isProcessing = false
+                // Send RAG prompt to AI provider via generateNote (reuses the AI pipeline)
+                let note = try await aiProvider.generateNote(
+                    from: chatResponse.ragPrompt,
+                    appName: "ScreenMind Chat",
+                    windowTitle: "Chat",
+                    lastNoteTitle: nil,
+                    lastNoteApp: nil,
+                    bundleID: "com.screenmind.app",
+                    contextWindow: []
+                )
+
+                // Use the generated note's details as the chat response
+                let aiResponse = note.skip ? "I couldn't generate a useful response for that query." : "\(note.summary)\n\n\(note.details)"
+
+                await MainActor.run {
+                    messages.append(ChatMessage(role: .assistant, content: aiResponse))
+                    isProcessing = false
+                }
+            } catch {
+                await MainActor.run {
+                    messages.append(ChatMessage(role: .assistant, content: """
+                    Sorry, I encountered an error: \(error.localizedDescription)
+
+                    Please check your AI provider settings and try again.
+                    """))
+                    isProcessing = false
+                }
             }
         }
     }
