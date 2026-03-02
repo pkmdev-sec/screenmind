@@ -1,4 +1,5 @@
 import Foundation
+import AppKit
 import Shared
 
 /// Provider for OpenAI-compatible chat completion APIs.
@@ -16,8 +17,39 @@ public struct OpenAICompatibleProvider: AIProvider, Sendable {
         self.providerName = providerName
     }
 
-    public func generateNote(from ocrText: String, appName: String, windowTitle: String?, lastNoteTitle: String?, lastNoteApp: String?) async throws -> GeneratedNote {
-        let prompt = NotePromptBuilder.buildUserPrompt(ocrText: ocrText, appName: appName, windowTitle: windowTitle, lastNoteTitle: lastNoteTitle, lastNoteApp: lastNoteApp)
+    public var supportsVision: Bool {
+        // Only OpenAI and Gemini support vision, not Ollama
+        return providerName == "OpenAI" || providerName == "Gemini"
+    }
+
+    public func generateNote(from ocrText: String, appName: String, windowTitle: String?, lastNoteTitle: String?, lastNoteApp: String?, bundleID: String? = nil, contextWindow: [(title: String, summary: String, timestamp: Date)] = []) async throws -> GeneratedNote {
+        return try await generateNote(from: ocrText, appName: appName, windowTitle: windowTitle, lastNoteTitle: lastNoteTitle, lastNoteApp: lastNoteApp, bundleID: bundleID, imageData: nil, contextWindow: contextWindow)
+    }
+
+    public func generateNote(from ocrText: String, appName: String, windowTitle: String?, lastNoteTitle: String?, lastNoteApp: String?, bundleID: String? = nil, imageData: Data? = nil, contextWindow: [(title: String, summary: String, timestamp: Date)] = []) async throws -> GeneratedNote {
+        let prompt = NotePromptBuilder.buildUserPrompt(ocrText: ocrText, appName: appName, windowTitle: windowTitle, lastNoteTitle: lastNoteTitle, lastNoteApp: lastNoteApp, bundleID: bundleID, contextWindow: contextWindow)
+
+        let visionEnabled = UserDefaults.standard.bool(forKey: "aiVisionEnabled")
+
+        // Build user message content
+        let userContent: Any
+        if visionEnabled, supportsVision, let imageData = imageData {
+            // Preprocess image
+            let processedImageData = try preprocessImage(imageData)
+            let base64Image = processedImageData.base64EncodedString()
+
+            userContent = [
+                ["type": "text", "text": prompt],
+                [
+                    "type": "image_url",
+                    "image_url": [
+                        "url": "data:image/jpeg;base64,\(base64Image)"
+                    ]
+                ]
+            ]
+        } else {
+            userContent = prompt
+        }
 
         let requestBody: [String: Any] = [
             "model": modelName,
@@ -25,7 +57,7 @@ public struct OpenAICompatibleProvider: AIProvider, Sendable {
             "temperature": UserDefaults.standard.double(forKey: "aiTemperature").clamped(to: 0.0...2.0, default: AppConstants.AI.temperature),
             "messages": [
                 ["role": "system", "content": NotePromptBuilder.systemPrompt],
-                ["role": "user", "content": prompt]
+                ["role": "user", "content": userContent]
             ]
         ]
 
@@ -59,6 +91,42 @@ public struct OpenAICompatibleProvider: AIProvider, Sendable {
         }
 
         return try Self.parseResponse(data, providerName: providerName)
+    }
+
+    /// Preprocess image: resize to max 1024px and convert to JPEG.
+    private func preprocessImage(_ data: Data) throws -> Data {
+        guard let nsImage = NSImage(data: data) else {
+            throw OpenAIError.parseError("Invalid image data")
+        }
+
+        let maxDimension: CGFloat = 1024
+        let size = nsImage.size
+        let aspectRatio = size.width / size.height
+
+        let newSize: CGSize
+        if size.width > size.height {
+            newSize = CGSize(width: maxDimension, height: maxDimension / aspectRatio)
+        } else {
+            newSize = CGSize(width: maxDimension * aspectRatio, height: maxDimension)
+        }
+
+        // Only resize if needed
+        if size.width <= maxDimension && size.height <= maxDimension {
+            return data
+        }
+
+        let resized = NSImage(size: newSize)
+        resized.lockFocus()
+        nsImage.draw(in: NSRect(origin: .zero, size: newSize))
+        resized.unlockFocus()
+
+        guard let tiffData = resized.tiffRepresentation,
+              let bitmap = NSBitmapImageRep(data: tiffData),
+              let jpegData = bitmap.representation(using: .jpeg, properties: [.compressionFactor: 0.8]) else {
+            throw OpenAIError.parseError("Image resize failed")
+        }
+
+        return jpegData
     }
 
     // MARK: - Response Parsing

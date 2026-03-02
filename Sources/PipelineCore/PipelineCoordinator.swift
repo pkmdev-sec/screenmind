@@ -20,6 +20,9 @@ public actor PipelineCoordinator {
     private var lastNoteTitle: String?
     private var recentWordSets: [(hash: UInt64, words: Set<String>)] = []
     private var frameSkipCounter: UInt64 = 0
+    private var contextWindow: [(title: String, summary: String, timestamp: Date)] = []
+    private var activeMeeting: DetectedMeeting?
+    private var meetingNoteIDs: [UUID] = []
 
     private let captureConfig: CaptureConfiguration
     private let captureActor: ScreenCaptureActor
@@ -37,6 +40,7 @@ public actor PipelineCoordinator {
     private let ocrCache = OCRCache()
     private let meetingDetector = MeetingDetectionActor()
     private let semanticSearch = SemanticSearchActor()
+    private let meetingSummarizer: MeetingSummarizer
     private let onNoteSaved: (@Sendable (String, String) -> Void)?
 
     public init(
@@ -54,6 +58,11 @@ public actor PipelineCoordinator {
         self.aiProcessor = AIProcessingActor(provider: aiProvider)
         self.storageActor = StorageActor(modelContainer: modelContainer)
         self.screenshotManager = ScreenshotFileManager()
+        self.meetingSummarizer = MeetingSummarizer(
+            storageActor: storageActor,
+            aiProcessor: aiProcessor,
+            meetingDetector: meetingDetector
+        )
     }
 
     /// Start the full pipeline.
@@ -323,6 +332,9 @@ public actor PipelineCoordinator {
         }
 
         // Stage 6: AI Note Generation (with retry via ErrorBoundary)
+        let contextWindowSize = UserDefaults.standard.integer(forKey: "aiContextWindowSize").clamped(to: 0...10, default: 3)
+        let currentContext = contextWindow.suffix(contextWindowSize).map { $0 }
+
         let generatedNote: GeneratedNote? = await errorBoundary.withRetry(
             stage: "ai-generation",
             strategy: .aiAPI,
@@ -331,7 +343,10 @@ public actor PipelineCoordinator {
             try await aiProcessor.generateNote(
                 from: processedText,
                 lastNoteTitle: lastNoteTitle,
-                lastNoteApp: lastNoteApp
+                lastNoteApp: lastNoteApp,
+                bundleID: frame.bundleIdentifier,
+                imageData: nil, // TODO: pass image data when vision is enabled
+                contextWindow: currentContext
             )
         }
 
@@ -427,6 +442,18 @@ public actor PipelineCoordinator {
             lastNoteApp = frame.appName
             appendDedupEntry(hash: hash, words: words)
 
+            // Update context window
+            contextWindow.append((title: generatedNote.title, summary: generatedNote.summary, timestamp: Date.now))
+            let maxContextSize = UserDefaults.standard.integer(forKey: "aiContextWindowSize").clamped(to: 0...10, default: 3)
+            if contextWindow.count > maxContextSize {
+                contextWindow.removeFirst()
+            }
+
+            // Meeting detection and tracking
+            if UserDefaults.standard.bool(forKey: "audioMeetingDetection") {
+                await checkMeetingStatus(noteID: savedNote.id)
+            }
+
             onNoteSaved?(generatedNote.title, frame.appName)
         } catch {
             let msg = String(describing: error)
@@ -481,6 +508,40 @@ public actor PipelineCoordinator {
             recentWordSets.removeFirst()
         }
     }
+
+    // MARK: - Meeting Detection
+
+    /// Check if we're in a meeting and track notes for summarization.
+    private func checkMeetingStatus(noteID: UUID) async {
+        let currentMeeting = await meetingDetector.detectCurrentMeeting()
+
+        // Meeting started
+        if let meeting = currentMeeting, activeMeeting == nil {
+            activeMeeting = meeting
+            meetingNoteIDs = [noteID]
+            SMLogger.pipeline.info("Meeting started: \(meeting.title)")
+        }
+        // Meeting ongoing - track note
+        else if currentMeeting != nil, activeMeeting != nil {
+            meetingNoteIDs.append(noteID)
+        }
+        // Meeting ended
+        else if currentMeeting == nil, let meeting = activeMeeting {
+            SMLogger.pipeline.info("Meeting ended: \(meeting.title), generating summary...")
+
+            // Fetch all notes from this meeting
+            do {
+                let notes = try await storageActor.fetchNotes(ids: meetingNoteIDs)
+                try await meetingSummarizer.summarizeMeeting(meeting, notes: notes)
+            } catch {
+                SMLogger.pipeline.error("Meeting summary failed: \(error.localizedDescription)")
+            }
+
+            // Reset state
+            activeMeeting = nil
+            meetingNoteIDs = []
+        }
+    }
 }
 
 /// Pipeline statistics snapshot.
@@ -492,4 +553,13 @@ public struct PipelineStats: Sendable {
     public let avgOCRTime: TimeInterval
     public let aiRequests: Int
     public let aiLimit: Int
+}
+
+// MARK: - Int clamping helper
+
+private extension Int {
+    func clamped(to range: ClosedRange<Int>, default defaultValue: Int) -> Int {
+        let value = self == 0 ? defaultValue : self
+        return Swift.min(Swift.max(value, range.lowerBound), range.upperBound)
+    }
 }

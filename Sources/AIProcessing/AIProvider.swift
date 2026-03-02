@@ -4,8 +4,26 @@ import OCRProcessing
 
 /// Protocol for AI note generation providers.
 public protocol AIProvider: Sendable {
+    /// Whether this provider supports vision (image input).
+    var supportsVision: Bool { get }
+
     /// Generate a structured note from OCR text and app context.
-    func generateNote(from ocrText: String, appName: String, windowTitle: String?, lastNoteTitle: String?, lastNoteApp: String?) async throws -> GeneratedNote
+    func generateNote(from ocrText: String, appName: String, windowTitle: String?, lastNoteTitle: String?, lastNoteApp: String?, bundleID: String?, contextWindow: [(title: String, summary: String, timestamp: Date)]) async throws -> GeneratedNote
+
+    /// Generate a note with optional image data (for vision-enabled providers).
+    func generateNote(from ocrText: String, appName: String, windowTitle: String?, lastNoteTitle: String?, lastNoteApp: String?, bundleID: String?, imageData: Data?, contextWindow: [(title: String, summary: String, timestamp: Date)]) async throws -> GeneratedNote
+}
+
+// MARK: - Default Implementations
+
+public extension AIProvider {
+    /// Default: no vision support
+    var supportsVision: Bool { false }
+
+    /// Default: ignore imageData and call text-only version
+    func generateNote(from ocrText: String, appName: String, windowTitle: String?, lastNoteTitle: String?, lastNoteApp: String?, bundleID: String?, imageData: Data?, contextWindow: [(title: String, summary: String, timestamp: Date)] = []) async throws -> GeneratedNote {
+        return try await generateNote(from: ocrText, appName: appName, windowTitle: windowTitle, lastNoteTitle: lastNoteTitle, lastNoteApp: lastNoteApp, bundleID: bundleID, contextWindow: contextWindow)
+    }
 }
 
 /// A note generated from screen content analysis.
@@ -78,7 +96,7 @@ public actor AIProcessingActor {
     }
 
     /// Generate a note from recognized text, respecting rate limits.
-    public func generateNote(from recognizedText: RecognizedText, lastNoteTitle: String? = nil, lastNoteApp: String? = nil) async throws -> GeneratedNote? {
+    public func generateNote(from recognizedText: RecognizedText, lastNoteTitle: String? = nil, lastNoteApp: String? = nil, bundleID: String? = nil, imageData: Data? = nil, contextWindow: [(title: String, summary: String, timestamp: Date)] = []) async throws -> GeneratedNote? {
         // Rate limit check
         if Date.now.timeIntervalSince(hourStart) > 3600 {
             requestCount = 0
@@ -98,7 +116,10 @@ public actor AIProcessingActor {
             appName: recognizedText.appName,
             windowTitle: recognizedText.windowTitle,
             lastNoteTitle: lastNoteTitle,
-            lastNoteApp: lastNoteApp
+            lastNoteApp: lastNoteApp,
+            bundleID: bundleID,
+            imageData: imageData,
+            contextWindow: contextWindow
         )
 
         // AI decided this frame should be skipped

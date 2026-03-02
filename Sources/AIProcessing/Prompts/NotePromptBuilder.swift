@@ -1,11 +1,24 @@
 import Foundation
 
+/// Per-app prompt template configuration.
+public struct AppPromptTemplate: Codable, Sendable {
+    public let bundleID: String
+    public let template: String
+    public let enabled: Bool
+
+    public init(bundleID: String, template: String, enabled: Bool = true) {
+        self.bundleID = bundleID
+        self.template = template
+        self.enabled = enabled
+    }
+}
+
 /// Shared prompt construction for all AI providers. Single source of truth for system prompt and user prompt format.
 public enum NotePromptBuilder {
 
     /// System prompt instructing the AI how to generate notes.
     public static var systemPrompt: String {
-        """
+        var prompt = """
         You are a screen activity analyzer for ScreenMind, a macOS productivity app. \
         Your job is to generate concise, useful notes from OCR text captured from the user's screen. \
         Only create notes for genuinely noteworthy activity — quality over quantity.
@@ -56,6 +69,17 @@ public enum NotePromptBuilder {
 
         IMPORTANT: Respond ONLY with the JSON object. No markdown, no explanation, no code blocks.
         """
+
+        // Append feedback modifiers if available
+        let modifiers = FeedbackAnalyzer.loadModifiers()
+        if !modifiers.isEmpty {
+            prompt += "\n\nUSER FEEDBACK PATTERNS (adapt your behavior):\n"
+            for modifier in modifiers {
+                prompt += "- \(modifier)\n"
+            }
+        }
+
+        return prompt
     }
 
     /// Build the user prompt from screen capture context.
@@ -64,16 +88,42 @@ public enum NotePromptBuilder {
         appName: String,
         windowTitle: String?,
         lastNoteTitle: String?,
-        lastNoteApp: String?
+        lastNoteApp: String?,
+        bundleID: String? = nil,
+        contextWindow: [(title: String, summary: String, timestamp: Date)] = []
     ) -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd HH:mm"
         let timestamp = formatter.string(from: Date())
 
+        // Check for app-specific prompt template
+        if let bundleID = bundleID,
+           let template = getAppTemplate(for: bundleID) {
+            return applyTemplate(
+                template,
+                appName: appName,
+                windowTitle: windowTitle,
+                ocrText: ocrText,
+                timestamp: timestamp
+            )
+        }
+
+        // Default prompt
         var prompt = "Timestamp: \(timestamp)\nApp: \(appName)"
         if let windowTitle, !windowTitle.isEmpty {
             prompt += "\nWindow: \(windowTitle)"
         }
+
+        // Add context window if available
+        if !contextWindow.isEmpty {
+            prompt += "\n\nRecent context:"
+            let now = Date.now
+            for context in contextWindow.reversed() {
+                let minutesAgo = Int(now.timeIntervalSince(context.timestamp) / 60)
+                prompt += "\n- \(minutesAgo)m ago: [\(context.title)] — \(context.summary)"
+            }
+        }
+
         if let lastNoteTitle, let lastNoteApp {
             prompt += "\n\nPrevious note (for dedup — skip if same activity):"
             prompt += "\n- Title: \(lastNoteTitle)"
@@ -81,5 +131,31 @@ public enum NotePromptBuilder {
         }
         prompt += "\n\nScreen text:\n\(ocrText)"
         return prompt
+    }
+
+    /// Get the app-specific template for a bundle ID.
+    private static func getAppTemplate(for bundleID: String) -> String? {
+        guard let data = UserDefaults.standard.data(forKey: "appPromptTemplates"),
+              let templates = try? JSONDecoder().decode([AppPromptTemplate].self, from: data) else {
+            return nil
+        }
+
+        // Find matching template (enabled only)
+        return templates.first(where: { $0.bundleID == bundleID && $0.enabled })?.template
+    }
+
+    /// Apply template with variable substitution.
+    private static func applyTemplate(
+        _ template: String,
+        appName: String,
+        windowTitle: String?,
+        ocrText: String,
+        timestamp: String
+    ) -> String {
+        return template
+            .replacingOccurrences(of: "{app}", with: appName)
+            .replacingOccurrences(of: "{window}", with: windowTitle ?? "")
+            .replacingOccurrences(of: "{text}", with: ocrText)
+            .replacingOccurrences(of: "{timestamp}", with: timestamp)
     }
 }

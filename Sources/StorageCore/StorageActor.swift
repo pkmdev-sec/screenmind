@@ -99,6 +99,16 @@ public actor StorageActor {
         return try fetchNotes(from: startOfDay, to: endOfDay)
     }
 
+    /// Fetch notes by IDs.
+    public func fetchNotes(ids: [UUID]) throws -> [NoteModel] {
+        let descriptor = FetchDescriptor<NoteModel>(
+            predicate: #Predicate { note in
+                ids.contains(note.id)
+            }
+        )
+        return try modelContext.fetch(descriptor)
+    }
+
     /// Search notes by text query.
     public func searchNotes(query: String) throws -> [NoteModel] {
         let descriptor = FetchDescriptor<NoteModel>(

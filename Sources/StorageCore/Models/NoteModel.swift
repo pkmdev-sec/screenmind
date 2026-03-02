@@ -1,9 +1,10 @@
 import Foundation
 import SwiftData
+import AIProcessing
 
 /// SwiftData model for persisted notes.
 @Model
-public final class NoteModel {
+public final class NoteModel: RatedNote {
     public var id: UUID
     public var title: String
     public var summary: String
@@ -17,6 +18,7 @@ public final class NoteModel {
     public var obsidianLinks: [String]
     public var obsidianExported: Bool
     public var redactionCount: Int = 0
+    public var userRating: Int? = nil // nil = unrated, 1 = up, -1 = down
 
     @Relationship(deleteRule: .cascade)
     public var screenshot: ScreenshotModel?
