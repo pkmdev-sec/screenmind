@@ -148,6 +148,27 @@ Content Dedup → AI Analysis → Storage → Multi-Format Export
 - **Plugin management** — Settings tab with install/uninstall/configure
 - Safe APIs: `log()`, `fetch()` (with permission), `getEnv()`
 
+### Note Editing & Advanced UX
+- **Inline editing** — Edit title, summary, details, tags, category after creation
+- **Auto-save** — Debounced 500ms save with visual indicator
+- **Calendar heatmap** — Month-view note density visualization, click to filter
+- **Focus mode integration** — Pauses capture during macOS DND (opt-in)
+- Tag management with add/remove
+
+### Browser Extension (Chrome/Firefox/Arc)
+- **Capture page context** — URL, title, selected text, favicon, meta description
+- **One-click capture** — Send current page to ScreenMind instantly
+- **Right-click menu** — "Send to ScreenMind" context menu item
+- **Connection status** — Shows if ScreenMind API is running
+- Works with Chrome, Edge, Brave, Arc, and Chromium browsers
+
+### Workflow Automation
+- **If-this-then-that rules** for note events
+- **6 triggers** — noteCreated, categoryIs, appIs, tagContains, titleContains, confidenceAbove
+- **4 actions** — addTag, webhook, notify, exportToFolder
+- Rules evaluate after every note creation
+- Persistent rules saved across restarts
+
 ### Developer Tools
 
 #### CLI (`screenmind-cli`)
@@ -164,11 +185,12 @@ screenmind-cli apps                          # Tracked applications
 #### REST API (localhost:9876)
 Enable in Settings > General > Developer API.
 ```
-GET /api/notes?q=search&limit=20&category=coding
-GET /api/notes/today
-GET /api/stats
-GET /api/apps
-GET /api/health
+GET  /api/notes?q=search&limit=20&category=coding
+GET  /api/notes/today
+GET  /api/stats
+GET  /api/apps
+GET  /api/health
+POST /api/capture    (browser extension context)
 ```
 
 #### MCP Server (localhost:9877)
@@ -215,6 +237,14 @@ swift build -c release
 # Or install just the CLI
 cp .build/release/screenmind-cli /usr/local/bin/
 ```
+
+### Browser Extension
+
+1. Open `chrome://extensions/` (or equivalent in your browser)
+2. Enable **Developer mode**
+3. Click **Load unpacked** and select the `browser-extension/` folder
+4. Pin the ScreenMind icon to your toolbar
+5. Make sure ScreenMind app is running with the API enabled (Settings > General)
 
 ## Requirements
 
@@ -284,11 +314,13 @@ ScreenMind is open source and we'd love your help! Here's how:
 5. **Open** a Pull Request
 
 Ideas for contributions:
-- Browser extension for richer web context (URL + page title enrichment)
+- Windows / Linux port (Rust core extraction)
 - iOS companion app for reading notes on the go
-- Calendar integration for meeting detection
-- Logseq/Notion export plugins
-- Custom AI prompt templates
+- Logseq / Notion export plugins (via Plugin System)
+- Custom AI prompt templates per app
+- Whisper.cpp integration for offline speech-to-text
+- Firefox extension port (WebExtensions API)
+- iCloud sync for multi-Mac setups
 
 ## License
 
