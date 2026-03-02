@@ -7,6 +7,7 @@ struct CaptureSettingsView: View {
     @AppStorage("captureIdleInterval") private var idleInterval = AppConstants.Capture.idleInterval
     @AppStorage("detectionThreshold") private var threshold = AppConstants.Detection.defaultThreshold
     @AppStorage("excludedApps") private var excludedAppsString = ""
+    @AppStorage("pauseDuringFocus") private var pauseDuringFocus = false
 
     @State private var newExcludedApp = ""
 
@@ -106,6 +107,19 @@ struct CaptureSettingsView: View {
                             .buttonStyle(.plain)
                         }
                     }
+                }
+            }
+
+            Section("Focus Mode") {
+                Toggle("Pause capture during Focus / DND", isOn: $pauseDuringFocus)
+
+                HStack(spacing: 6) {
+                    Image(systemName: "moon.fill")
+                        .foregroundStyle(.purple)
+                        .font(.system(size: 12))
+                    Text("When macOS Focus (Do Not Disturb) is active, ScreenMind will pause capturing. Resumes automatically when Focus ends.")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
                 }
             }
         }

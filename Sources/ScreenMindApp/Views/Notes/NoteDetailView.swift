@@ -5,14 +5,26 @@ import Shared
 /// Full note detail view — title, summary, details, metadata, tags.
 struct NoteDetailView: View {
     let note: NoteModel
+    @State private var isEditing = false
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 // Header
                 VStack(alignment: .leading, spacing: 8) {
-                    Text(note.title)
-                        .font(.system(size: 22, weight: .bold))
+                    HStack {
+                        Text(note.title)
+                            .font(.system(size: 22, weight: .bold))
+                        Spacer()
+                        Button {
+                            isEditing = true
+                        } label: {
+                            Label("Edit", systemImage: "pencil")
+                                .font(.system(size: 12))
+                        }
+                        .controlSize(.small)
+                        .buttonStyle(.bordered)
+                    }
 
                     HStack(spacing: 12) {
                         CategoryBadge(category: note.category)
@@ -159,5 +171,8 @@ struct NoteDetailView: View {
             .padding(24)
         }
         .background(.background)
+        .sheet(isPresented: $isEditing) {
+            NoteEditView(note: note)
+        }
     }
 }
