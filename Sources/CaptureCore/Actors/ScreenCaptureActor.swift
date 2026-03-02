@@ -84,44 +84,88 @@ public actor ScreenCaptureActor {
         SMLogger.capture.info("Screen capture started (\(streamConfig.width)x\(streamConfig.height))")
     }
 
-    /// Capture a single frame on demand (for manual capture shortcut).
+    /// Capture a single frame on demand (for manual capture shortcut or event-driven capture).
     public func captureNow() async -> CapturedFrame? {
-        guard isCapturing else { return nil }
-
         let app = NSWorkspace.shared.frontmostApplication
         let pid = app?.processIdentifier
         let windowInfo = pid.flatMap { Self.frontmostWindowInfo(for: $0) }
 
-        // Take a screenshot — try active display first, fall back to main
-        let displayID = activeDisplayID ?? CGMainDisplayID()
-        var screenshot = CGDisplayCreateImage(displayID)
-        if screenshot == nil && displayID != CGMainDisplayID() {
-            SMLogger.capture.warning("Manual capture: active display failed, falling back to main display")
-            screenshot = CGDisplayCreateImage(CGMainDisplayID())
-        }
-        guard let screenshot else {
-            SMLogger.capture.error("Manual capture: failed to grab display image from any display")
+        // Take a screenshot using SCShareableContent for consistency
+        do {
+            let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
+            let display = Self.displayWithActiveWindow(from: content.displays) ?? content.displays.first
+            guard let display else {
+                SMLogger.capture.error("captureNow: No displays available")
+                return nil
+            }
+
+            let filter = SCContentFilter(display: display, excludingWindows: [])
+            let config = SCStreamConfiguration()
+            let scale = display.width > Int(configuration.maxWidth)
+                ? Double(configuration.maxWidth) / Double(display.width)
+                : 1.0
+            config.width = Int(Double(display.width) * scale)
+            config.height = Int(Double(display.height) * scale)
+            config.pixelFormat = kCVPixelFormatType_32BGRA
+            config.showsCursor = false
+
+            // Capture single frame synchronously
+            guard let image = try await captureSingleFrame(filter: filter, config: config) else {
+                SMLogger.capture.error("captureNow: Failed to capture frame")
+                return nil
+            }
+
+            // Crop to active window if possible
+            let finalImage: CGImage
+            let displayID = display.displayID
+            if let bounds = windowInfo?.bounds,
+               let cropped = Self.cropToWindow(image: image, windowBounds: bounds, displayID: displayID) {
+                finalImage = cropped
+            } else {
+                finalImage = image
+            }
+
+            return CapturedFrame(
+                image: finalImage,
+                appName: app?.localizedName ?? "Unknown",
+                windowTitle: windowInfo?.title,
+                bundleIdentifier: app?.bundleIdentifier,
+                displayID: displayID,
+                isManualCapture: false,
+                processIdentifier: pid
+            )
+        } catch {
+            SMLogger.capture.error("captureNow failed: \(String(describing: error), privacy: .public)")
             return nil
         }
+    }
 
-        let finalImage: CGImage
-        if let bounds = windowInfo?.bounds,
-           let cropped = Self.cropToWindow(image: screenshot, windowBounds: bounds, displayID: displayID) {
-            finalImage = cropped
-        } else {
-            finalImage = screenshot
+    /// Capture a single frame using SCStream (used by captureNow).
+    private func captureSingleFrame(filter: SCContentFilter, config: SCStreamConfiguration) async throws -> CGImage? {
+        return try await withCheckedThrowingContinuation { continuation in
+            var didResume = false
+            let handler = FrameHandler { image in
+                if !didResume {
+                    didResume = true
+                    continuation.resume(returning: image)
+                }
+            }
+            Task {
+                do {
+                    let tempStream = SCStream(filter: filter, configuration: config, delegate: nil)
+                    try tempStream.addStreamOutput(handler, type: .screen, sampleHandlerQueue: .global(qos: .utility))
+                    try await tempStream.startCapture()
+                    // Wait briefly for first frame
+                    try await Task.sleep(for: .milliseconds(100))
+                    try await tempStream.stopCapture()
+                } catch {
+                    if !didResume {
+                        didResume = true
+                        continuation.resume(throwing: error)
+                    }
+                }
+            }
         }
-
-        SMLogger.capture.info("Manual capture taken — app=\(app?.localizedName ?? "Unknown", privacy: .public)")
-
-        return CapturedFrame(
-            image: finalImage,
-            appName: app?.localizedName ?? "Unknown",
-            windowTitle: windowInfo?.title,
-            bundleIdentifier: app?.bundleIdentifier,
-            displayID: displayID,
-            isManualCapture: true
-        )
     }
 
     /// Stop capturing.
@@ -160,7 +204,8 @@ public actor ScreenCaptureActor {
             windowTitle: windowInfo?.title,
             bundleIdentifier: app?.bundleIdentifier,
             displayID: displayID,
-            isManualCapture: false
+            isManualCapture: false,
+            processIdentifier: pid
         )
         continuation?.yield(frame)
     }

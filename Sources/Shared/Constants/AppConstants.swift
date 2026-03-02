@@ -10,6 +10,10 @@ public enum AppConstants {
         public static let activeInterval: TimeInterval = 5
         public static let idleInterval: TimeInterval = 30
         public static let defaultInterval: TimeInterval = 15
+        public static let eventDrivenMinDebounce: TimeInterval = 0.2
+        public static let eventDrivenTypingPause: TimeInterval = 0.5
+        public static let eventDrivenScrollStop: TimeInterval = 0.3
+        public static let eventDrivenIdleFallback: TimeInterval = 30.0
     }
 
     // MARK: - Change Detection

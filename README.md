@@ -46,13 +46,13 @@ No manual screenshots. No copy-pasting into notes. No "I'll bookmark this later"
 ScreenMind runs a smart multi-stage pipeline that's designed to be invisible:
 
 ```
-Screen Capture → Change Detection → OCR → Redaction → Skip Rules →
-Stealth Check → Content Dedup → AI Analysis → Storage → Multi-Format Export
+Event Trigger → Screen Capture → Change Detection → AX Tree / OCR → Redaction →
+Skip Rules → Stealth Check → Content Dedup → AI Analysis → Storage → Export
 ```
 
-1. **Captures** your screen at smart intervals (active window, multi-display aware)
-2. **Detects** meaningful changes via perceptual hashing (ignores idle/static screens)
-3. **Reads** text using Apple Vision framework (on-device OCR)
+1. **Triggers** on meaningful events (app switch, typing pause, scroll stop, clipboard) — not fixed timers
+2. **Captures** your screen on-demand (active window, multi-display aware, screen-lock aware)
+3. **Reads** text via Accessibility APIs (10x faster) with OCR fallback (Apple Vision)
 4. **Redacts** sensitive data (credit cards, API keys, passwords) + ML-based PII detection
 5. **Evaluates** user-defined skip rules and stealth mode to filter unwanted content
 6. **Deduplicates** aggressively with 5-layer defense (hash + Jaccard + cooldown + content + buffer)
@@ -64,13 +64,18 @@ Stealth Check → Content Dedup → AI Analysis → Storage → Multi-Format Exp
 ## Features
 
 ### Smart Capture
+- **Event-driven capture** — triggers on app switch, typing pause, scroll stop, clipboard, not fixed timers (40-60% less CPU, 80% less storage)
+- **Accessibility tree extraction** — reads UI text via macOS AX APIs (10x faster than OCR), falls back to Vision OCR for images/remote desktops
+- **3-tier power profiles** — Performance (AC), Balanced (battery >40%), Saver (battery ≤40%) with thermal override
+- **Screen lock detection** — auto-skips capture when screen locked via CGSession polling
+- **Hot frame cache** — in-memory cache of recent 2000 frames for instant timeline lookups
 - Multi-display support (captures from display with active window)
 - Active-window cropping for focused screenshots
-- Configurable intervals (5s active / 30s idle by default)
-- Reduced capture rate on low battery (not full stop)
+- Timer fallback mode (5s active / 30s idle) if event-driven disabled
 - Excluded apps list (skip sensitive or noisy apps)
 - **Manual capture** with `Cmd+Opt+Shift+C` for on-demand notes
-- **Screenshot diffing** — pixel-level comparison with connected component analysis to identify what changed
+- **Screenshot diffing** — pixel-level comparison with connected component analysis
+- **6x frame downscaling** before perceptual hash comparison (30-50% faster change detection)
 
 ### Multi-Provider AI
 - **Claude** (Anthropic) — default, supports vision
@@ -149,19 +154,24 @@ Stealth Check → Content Dedup → AI Analysis → Storage → Multi-Format Exp
 - Skip and redaction counters
 
 ### Audio Intelligence
+- **System audio capture** — hear what your Mac hears (Zoom, Meet, media) via ScreenCaptureKit
+- **Multi-engine STT** — Apple Speech (on-device, default) with Whisper API fallback (cloud)
+- **Enhanced VAD** — energy + zero-crossing rate with 5-frame smoothing (replaces basic RMS)
+- **Speaker identification** — cosine similarity on audio embeddings (0.7 threshold)
+- **Batch transcription** — buffers audio during meetings, transcribes as batch when meeting ends
 - **Voice memos** — `Cmd+Opt+Shift+V` to record, auto-transcribes on-device
-- **On-device speech recognition** — Apple Speech framework, 50+ languages, no cloud
 - **Meeting detection** — Calendar integration (EventKit) detects Zoom, Teams, Meet, Slack
-- **Voice Activity Detection** — Energy-based VAD filters silence from capture
-- Configurable language, VAD sensitivity, memo duration
+- Configurable language, VAD sensitivity, STT engine, memo duration
 
 ### Semantic Search & AI Chat
+- **Hybrid search** — combines HNSW semantic + SQLite FTS5 keyword search with reciprocal rank fusion
+- **Search result caching** — LRU cache (100 entries, 5min TTL) for 10x faster repeated queries
 - **Vector embeddings** — on-device via NaturalLanguage.framework (512-dim)
-- **Semantic search** — find notes by meaning, not just keywords
 - **HNSW index** — sub-millisecond search over 100,000+ notes
 - **Natural language queries** — "What was I coding yesterday morning?"
 - **Chat with your notes** — RAG-powered AI chat window with conversation history
-- Auto-indexes every note (title + summary + details)
+- **AI cost tracking** — tracks input/output tokens and estimated spend per session
+- Auto-indexes every note in both semantic and FTS5 indexes
 
 ### Knowledge Graph
 - **Auto-linking** — discovers related notes via semantic similarity (>60%)
@@ -173,6 +183,9 @@ Stealth Check → Content Dedup → AI Analysis → Storage → Multi-Format Exp
 ### Plugin System
 - **JavaScript plugins** — sandboxed via JavaScriptCore
 - **6 lifecycle hooks** — onNoteCreated, onNoteSaved, onNoteExported, onAppStartup, onAppShutdown, onTimer
+- **Scheduled execution** — interval-based scheduling (`every 30m`, `every 2h`, `every 1d`)
+- **Storage APIs** — `readNote()`, `searchNotes()`, `getNoteCount()` (requires `storage` permission)
+- **Network security** — HTTPS-only (localhost HTTP allowed), 10MB response limit, 10s timeout
 - **MCP Server** — Claude Desktop / Cursor integration on localhost:9877
 - **Plugin management** — Settings tab with install/uninstall/configure
 - Safe APIs: `log()`, `fetch()` (with permission), `getEnv()`
@@ -293,25 +306,26 @@ cp .build/release/screenmind-cli /usr/local/bin/
 
 ## Architecture
 
-ScreenMind is built as a clean Swift Package Manager project with 12 independent modules and 285 unit tests:
+ScreenMind is built as a clean Swift Package Manager project with 13 independent modules and 285 unit tests:
 
 ```
-ScreenMindApp            <- Main app (SwiftUI menu bar + windows)
-  |- PipelineCore        <- Orchestrates capture-to-note pipeline
-  |   |- CaptureCore         <- ScreenCaptureKit + multi-display + manual capture
-  |   |- ChangeDetection     <- Perceptual hashing (dHash) + screenshot diffing
-  |   |- OCRProcessing       <- Apple Vision + redaction + ML PII + parallel queue
-  |   |- AIProcessing        <- Multi-provider AI + vision + custom prompts + feedback
-  |   |- StorageCore         <- SwiftData + exporters + encryption + migration framework
-  |   |- SystemIntegration   <- Shortcuts, Spotlight, notifications, API/MCP, vault lock
-  |   |- AudioCore           <- Microphone capture, speech-to-text, voice memos
-  |   |- SemanticSearch      <- HNSW vector index, NL queries, RAG chat, knowledge graph
-  |   '- PluginSystem        <- JavaScriptCore plugin engine + lifecycle hooks
-  '- Shared              <- Constants, logging, keychain, sync engine, utilities
-ScreenMindCLI            <- CLI tool (search, export, stats)
+ScreenMindApp                <- Main app (SwiftUI menu bar + windows)
+  |- PipelineCore            <- Orchestrates event-driven capture-to-note pipeline
+  |   |- CaptureCore             <- Event monitor + ScreenCaptureKit + hot frame cache
+  |   |- AccessibilityExtraction <- macOS AX tree walking (10x faster than OCR)
+  |   |- ChangeDetection         <- 6x-downscaled perceptual hashing + histogram diff
+  |   |- OCRProcessing           <- Apple Vision fallback + redaction + ML PII
+  |   |- AIProcessing            <- Multi-provider AI + vision + prompts + cost tracking
+  |   |- StorageCore             <- SwiftData + exporters + encryption + migration
+  |   |- SystemIntegration       <- Power profiles, lock monitor, API/MCP, vault lock
+  |   |- AudioCore               <- System audio + mic, multi-engine STT, speaker ID
+  |   |- SemanticSearch          <- Hybrid HNSW+FTS5, NL queries, RAG chat, knowledge graph
+  |   '- PluginSystem            <- JSCore engine + scheduled execution + storage APIs
+  '- Shared                  <- Constants, logging, keychain, sync engine, utilities
+ScreenMindCLI                <- CLI tool (search, export, stats)
 ```
 
-Every module is actor-isolated for thread safety. The pipeline uses `AsyncStream` with backpressure control. Error boundaries with exponential retry keep things running even when individual stages fail.
+Every module is actor-isolated for thread safety. The pipeline uses event-driven `AsyncStream` with backpressure control, 3-tier power profiles, and error boundaries with exponential retry.
 
 ## Configuration
 
@@ -320,13 +334,15 @@ All settings accessible from the menu bar > Settings:
 | Tab | Settings |
 |-----|----------|
 | **General** | Launch at login, Obsidian vault path, data retention, disk usage, API server toggle |
-| **Capture** | Active/idle intervals, detection sensitivity, excluded apps |
-| **Audio** | Microphone toggle, VAD sensitivity, language, meeting detection, memo duration |
+| **Capture** | Event triggers (app switch, typing, scroll, clipboard), idle fallback, excluded apps |
+| **Power** | Auto-switch profiles, manual override (Performance/Balanced/Saver), thermal info |
+| **Audio** | System audio + mic toggle, STT engine (Apple/Whisper), batch mode, VAD, language |
 | **AI** | Provider selection, API key, model, endpoint, temperature, rate limit, vision toggle, custom prompts |
 | **Export** | Enable/disable Obsidian, JSON, Markdown, Notion, Logseq, Slack, Webhook + per-format config |
 | **Privacy** | Content redaction, PII detection level, custom patterns, skip rules, stealth mode, encryption, vault password, audit log |
-| **Stats** | Live CPU/RAM/battery gauges, pipeline throughput, processing times |
-| **Plugins** | Installed plugins, MCP server config, plugin development guide |
+| **Search** | Hybrid search toggle, semantic/keyword weight balance |
+| **Stats** | Live CPU/RAM/battery gauges, pipeline throughput, AI cost tracking |
+| **Plugins** | Installed plugins, scheduled execution, MCP server config |
 
 ## Privacy
 

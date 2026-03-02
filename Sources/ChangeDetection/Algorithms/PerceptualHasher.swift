@@ -47,4 +47,34 @@ public enum PerceptualHasher {
 
         return hash
     }
+
+    /// Compute dHash with downscaling for faster processing of large images.
+    /// Downscales the image before computing the hash to reduce computation time.
+    public static func hashWithDownscale(of image: CGImage, scaleFactor: Int = 6) -> UInt64 {
+        let targetW = max(image.width / scaleFactor, 32)
+        let targetH = max(image.height / scaleFactor, 32)
+        let colorSpace = CGColorSpaceCreateDeviceGray()
+
+        guard let ctx = CGContext(
+            data: nil,
+            width: targetW,
+            height: targetH,
+            bitsPerComponent: 8,
+            bytesPerRow: targetW,
+            space: colorSpace,
+            bitmapInfo: CGImageAlphaInfo.none.rawValue
+        ) else {
+            // Fallback to regular hash if downscaling fails
+            return hash(of: image)
+        }
+
+        ctx.interpolationQuality = .low
+        ctx.draw(image, in: CGRect(x: 0, y: 0, width: targetW, height: targetH))
+
+        guard let downscaled = ctx.makeImage() else {
+            return hash(of: image)
+        }
+
+        return hash(of: downscaled)
+    }
 }

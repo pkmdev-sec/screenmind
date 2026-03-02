@@ -11,8 +11,9 @@ public struct PluginManifest: Codable, Sendable, Identifiable {
     public let hooks: [String] // ["onNoteCreated", "onTimer"]
     public let permissions: [String] // ["network", "storage"]
     public let homepage: String?
+    public let schedule: String?  // "every 30m", "every 2h", "every 1d"
 
-    public init(id: String, name: String, version: String, author: String, description: String, main: String = "main.js", hooks: [String] = [], permissions: [String] = [], homepage: String? = nil) {
+    public init(id: String, name: String, version: String, author: String, description: String, main: String = "main.js", hooks: [String] = [], permissions: [String] = [], homepage: String? = nil, schedule: String? = nil) {
         self.id = id
         self.name = name
         self.version = version
@@ -22,6 +23,7 @@ public struct PluginManifest: Codable, Sendable, Identifiable {
         self.hooks = hooks
         self.permissions = permissions
         self.homepage = homepage
+        self.schedule = schedule
     }
 }
 

@@ -19,10 +19,14 @@ public actor PipelineCoordinator {
     private var lastNoteApp: String?
     private var lastNoteTitle: String?
     private var recentWordSets: [(hash: UInt64, words: Set<String>)] = []
+    private var recentContentKeys: [(key: String, timestamp: Date)] = []
     private var frameSkipCounter: UInt64 = 0
     private var contextWindow: [(title: String, summary: String, timestamp: Date)] = []
     private var activeMeeting: DetectedMeeting?
     private var meetingNoteIDs: [UUID] = []
+    private var eventMonitor: EventMonitorActor?
+    private let screenLockMonitor = ScreenLockMonitor()
+    private var powerProfileTask: Task<Void, Never>?
 
     private let captureConfig: CaptureConfiguration
     private let captureActor: ScreenCaptureActor
@@ -33,6 +37,7 @@ public actor PipelineCoordinator {
     private let storageActor: StorageActor
     private let screenshotManager: ScreenshotFileManager
     private let powerMonitor = PowerStateMonitor()
+    private let powerProfileManager = PowerProfileManager()
     private let spotlightIndexer = SpotlightIndexer()
     private let errorBoundary = ErrorBoundary()
     private let auditLogger = AuditLogger()
@@ -97,23 +102,53 @@ public actor PipelineCoordinator {
             _ = await meetingDetector.requestAccess()
         }
 
-        // Set up the frame stream BEFORE starting capture so no frames are lost
-        let frameStream = await captureActor.frames()
+        // Start power profile management
+        await powerProfileManager.start()
+        startPowerProfileMonitoring()
 
         do {
             await activityMonitor.startMonitoring()
-            try await captureActor.start()
+
+            // Choose between event-driven or timer-based capture
+            if captureConfig.eventDrivenEnabled {
+                // Event-driven mode: monitor OS events and capture on demand
+                SMLogger.pipeline.info("Starting event-driven capture mode")
+                await screenLockMonitor.startMonitoring()
+                let monitor = EventMonitorActor(configuration: captureConfig)
+                self.eventMonitor = monitor
+                let events = await monitor.events()
+
+                captureTask = Task { [weak self] in
+                    guard let self else { return }
+                    for await _ in events {
+                        guard await self.isRunning else { break }
+                        // Skip captures when screen is locked
+                        if await self.screenLockMonitor.isScreenLocked() {
+                            continue
+                        }
+                        // Capture frame on event
+                        if let frame = await self.captureActor.captureNow() {
+                            await self.processFrame(frame)
+                        }
+                    }
+                }
+            } else {
+                // Timer-based mode: traditional streaming capture
+                SMLogger.pipeline.info("Starting timer-based capture mode")
+                let frameStream = await captureActor.frames()
+                try await captureActor.start()
+
+                captureTask = Task { [weak self] in
+                    guard let self else { return }
+                    for await frame in frameStream {
+                        guard await self.isRunning else { break }
+                        await self.processFrame(frame)
+                    }
+                }
+            }
         } catch {
             isRunning = false
             throw error
-        }
-
-        captureTask = Task { [weak self] in
-            guard let self else { return }
-            for await frame in frameStream {
-                guard await self.isRunning else { break }
-                await self.processFrame(frame)
-            }
         }
 
         SMLogger.pipeline.info("Pipeline started — processing frames")
@@ -123,10 +158,22 @@ public actor PipelineCoordinator {
     public func stop() async {
         guard isRunning else { return }
         isRunning = false
+
+        // Nil out eventMonitor before cancelling task to ensure stream termination
+        if eventMonitor != nil {
+            eventMonitor = nil
+            // Allow the stream to finish naturally before cancelling the task
+            try? await Task.sleep(for: .milliseconds(100))
+        }
+
         captureTask?.cancel()
         captureTask = nil
+        powerProfileTask?.cancel()
+        powerProfileTask = nil
         await captureActor.stop()
         await activityMonitor.stopMonitoring()
+        await screenLockMonitor.stopMonitoring()
+        await powerProfileManager.stop()
 
         // Write daily summary on stop
         do {
@@ -186,19 +233,7 @@ public actor PipelineCoordinator {
     private func processFrame(_ frame: CapturedFrame) async {
         await resourceMonitor.recordFrameCaptured()
 
-        // Stage 0a: Battery check — reduce capture rate on low battery, but don't block entirely.
-        // Users on low battery still expect SOME captures, just less frequently.
-        if await powerMonitor.shouldPauseForBattery() {
-            // On low battery: only process every 4th frame (effectively 20s intervals instead of 5s)
-            if frameSkipCounter % 4 != 0 {
-                frameSkipCounter += 1
-                return
-            }
-            frameSkipCounter += 1
-            SMLogger.pipeline.debug("Low battery — processing at reduced rate")
-        }
-
-        // Stage 0b: Excluded apps filter
+        // Stage 0: Excluded apps filter
         if let bundleID = frame.bundleIdentifier,
            captureConfig.excludedBundleIDs.contains(bundleID) {
             SMLogger.pipeline.debug("Skipping excluded app: \(bundleID, privacy: .public)")
@@ -309,6 +344,13 @@ public actor PipelineCoordinator {
         let hash = fnv1aHash(words)
         if isTextDuplicate(hash: hash, words: words) {
             SMLogger.pipeline.debug("Content dedup — skipping similar text")
+            return
+        }
+
+        // Stage 4b: 30-second content dedup floor — skip if same app+window+text seen recently
+        let contentKey = makeContentKey(bundleID: frame.bundleIdentifier, windowTitle: frame.windowTitle, textHash: hash)
+        if isRecentDuplicate(contentKey: contentKey) {
+            SMLogger.pipeline.debug("30s dedup — same app+window+text seen recently")
             return
         }
 
@@ -441,6 +483,7 @@ public actor PipelineCoordinator {
             lastNoteTitle = generatedNote.title
             lastNoteApp = frame.appName
             appendDedupEntry(hash: hash, words: words)
+            recordContentKey(contentKey)
 
             // Update context window
             contextWindow.append((title: generatedNote.title, summary: generatedNote.summary, timestamp: Date.now))
@@ -506,6 +549,53 @@ public actor PipelineCoordinator {
         recentWordSets.append((hash: hash, words: words))
         if recentWordSets.count > AppConstants.Pipeline.recentTextBufferSize {
             recentWordSets.removeFirst()
+        }
+    }
+
+    /// Create a unique content key from bundleID + windowTitle + textHash.
+    private func makeContentKey(bundleID: String?, windowTitle: String?, textHash: UInt64) -> String {
+        let bundle = bundleID ?? "unknown"
+        let window = windowTitle ?? "untitled"
+        return "\(bundle)|\(window)|\(textHash)"
+    }
+
+    /// Check if the same content key was seen within the last 30 seconds.
+    private func isRecentDuplicate(contentKey: String) -> Bool {
+        let now = Date.now
+        let cooldownSeconds: TimeInterval = 30
+
+        // Clean up expired entries
+        recentContentKeys.removeAll { now.timeIntervalSince($0.timestamp) > cooldownSeconds }
+
+        // Check for duplicate
+        return recentContentKeys.contains { $0.key == contentKey }
+    }
+
+    /// Record a content key for 30-second dedup tracking.
+    private func recordContentKey(_ contentKey: String) {
+        recentContentKeys.append((key: contentKey, timestamp: Date.now))
+        // Limit buffer size to prevent unbounded growth
+        if recentContentKeys.count > 100 {
+            recentContentKeys.removeFirst()
+        }
+    }
+
+    // MARK: - Power Profile Management
+
+    /// Monitor power state and adjust capture parameters adaptively.
+    private func startPowerProfileMonitoring() {
+        powerProfileTask = Task { [weak self] in
+            while !Task.isCancelled {
+                guard let self else { return }
+                // Update profile every 30 seconds
+                try? await Task.sleep(for: .seconds(30))
+                let profile = await self.powerProfileManager.updateAndGetConfiguration()
+                // Update change detection threshold
+                await self.changeDetector.updateThreshold(profile.visualChangeThreshold)
+                // Log mode changes
+                let mode = await self.powerProfileManager.currentPowerMode()
+                SMLogger.pipeline.debug("Power profile: \(mode.rawValue)")
+            }
         }
     }
 

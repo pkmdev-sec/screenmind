@@ -4,7 +4,7 @@ import Shared
 
 /// Detects meaningful screen changes using perceptual hashing with a rolling window.
 public actor ChangeDetectionActor {
-    private let threshold: Double
+    private var threshold: Double
     private let windowSize: Int
     private var hashWindow: [UInt64] = []
     private var lastEmittedHash: UInt64?
@@ -17,6 +17,11 @@ public actor ChangeDetectionActor {
     ) {
         self.threshold = threshold
         self.windowSize = windowSize
+    }
+
+    /// Update the detection threshold (for power profile adaptation).
+    public func updateThreshold(_ newThreshold: Double) {
+        self.threshold = newThreshold
     }
 
     /// Process a captured frame and return a SignificantFrame if it passes change detection.

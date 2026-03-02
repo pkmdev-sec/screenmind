@@ -86,6 +86,11 @@ public actor PluginEngine {
     /// Get the plugins directory path.
     public var directory: URL { pluginsDirectory }
 
+    // MARK: - Storage Closures
+
+    /// Storage closures that can be injected by the app (to avoid circular dependencies)
+    public var getNoteCountClosure: (@Sendable () async throws -> Int)?
+
     // MARK: - Sandboxing
 
     private func injectSafeAPIs(into context: JSContext, manifest: PluginManifest) {
@@ -103,8 +108,16 @@ public actor PluginEngine {
                         reject?.call(withArguments: ["Invalid URL"])
                         return
                     }
+
+                    // Security: enforce HTTPS or explicit localhost HTTP
+                    if url.scheme != "https" && !(url.scheme == "http" && (url.host == "localhost" || url.host == "127.0.0.1")) {
+                        reject?.call(withArguments: ["Only HTTPS URLs are allowed (or HTTP to localhost)"])
+                        return
+                    }
+
                     var request = URLRequest(url: url)
-                    request.timeoutInterval = 10
+                    request.timeoutInterval = 10 // 10 second timeout
+
                     if let method = options?.objectForKeyedSubscript("method")?.toString() {
                         request.httpMethod = method
                     }
@@ -116,11 +129,21 @@ public actor PluginEngine {
                     if let body = options?.objectForKeyedSubscript("body")?.toString() {
                         request.httpBody = body.data(using: .utf8)
                     }
+
                     URLSession.shared.dataTask(with: request) { data, response, error in
                         if let error {
                             reject?.call(withArguments: [error.localizedDescription])
-                        } else if let data, let text = String(data: data, encoding: .utf8) {
-                            resolve?.call(withArguments: [text])
+                        } else if let data {
+                            // Security: enforce 10MB response size limit
+                            if data.count > 10 * 1024 * 1024 {
+                                reject?.call(withArguments: ["Response size exceeds 10MB limit"])
+                                return
+                            }
+                            if let text = String(data: data, encoding: .utf8) {
+                                resolve?.call(withArguments: [text])
+                            } else {
+                                reject?.call(withArguments: ["Response not valid UTF-8"])
+                            }
                         }
                     }.resume()
                 }
@@ -134,6 +157,29 @@ public actor PluginEngine {
             UserDefaults.standard.string(forKey: "plugin.\(manifest.id).\(key)")
         }
         context.setObject(getEnvBlock, forKeyedSubscript: "getEnv" as NSString)
+
+        // Storage APIs (only if permitted)
+        if manifest.permissions.contains("storage") {
+            // getNoteCount — returns total note count
+            let getNoteCountBlock: @convention(block) () -> JSValue = {
+                let promise = JSValue(newPromiseIn: context) { [weak self] resolve, reject in
+                    Task {
+                        do {
+                            guard let self, let closure = await self.getNoteCountClosure else {
+                                reject?.call(withArguments: ["Storage not available"])
+                                return
+                            }
+                            let count = try await closure()
+                            resolve?.call(withArguments: [count])
+                        } catch {
+                            reject?.call(withArguments: [error.localizedDescription])
+                        }
+                    }
+                }
+                return promise!
+            }
+            context.setObject(getNoteCountBlock, forKeyedSubscript: "getNoteCount" as NSString)
+        }
     }
 }
 
