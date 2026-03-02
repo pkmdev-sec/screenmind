@@ -85,12 +85,13 @@ public actor ScreenCaptureActor {
     }
 
     /// Capture a single frame on demand (for manual capture shortcut or event-driven capture).
+    /// Uses SCScreenshotManager for single-shot capture — does NOT create/destroy SCStream,
+    /// which avoids triggering the macOS "Currently Sharing" indicator.
     public func captureNow() async -> CapturedFrame? {
         let app = NSWorkspace.shared.frontmostApplication
         let pid = app?.processIdentifier
         let windowInfo = pid.flatMap { Self.frontmostWindowInfo(for: $0) }
 
-        // Take a screenshot using SCShareableContent for consistency
         do {
             let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
             let display = Self.displayWithActiveWindow(from: content.displays) ?? content.displays.first
@@ -109,11 +110,11 @@ public actor ScreenCaptureActor {
             config.pixelFormat = kCVPixelFormatType_32BGRA
             config.showsCursor = false
 
-            // Capture single frame synchronously
-            guard let image = try await captureSingleFrame(filter: filter, config: config) else {
-                SMLogger.capture.error("captureNow: Failed to capture frame")
-                return nil
-            }
+            // Use SCScreenshotManager for single-shot capture (no stream creation)
+            let image = try await SCScreenshotManager.captureImage(
+                contentFilter: filter,
+                configuration: config
+            )
 
             // Crop to active window if possible
             let finalImage: CGImage
@@ -140,8 +141,13 @@ public actor ScreenCaptureActor {
         }
     }
 
-    /// Capture a single frame using SCStream (used by captureNow).
-    private func captureSingleFrame(filter: SCContentFilter, config: SCStreamConfiguration) async throws -> CGImage? {
+    // MARK: - Removed captureSingleFrame (was creating/destroying SCStream per capture,
+    // which triggered macOS "Currently Sharing" indicator. Replaced with SCScreenshotManager.captureImage)
+
+    /// Legacy single frame capture kept for reference — DO NOT USE.
+    /// Creates a temporary SCStream which triggers macOS screen sharing indicator.
+    @available(*, deprecated, message: "Use SCScreenshotManager.captureImage instead")
+    private func _legacyCaptureSingleFrame(filter: SCContentFilter, config: SCStreamConfiguration) async throws -> CGImage? {
         return try await withCheckedThrowingContinuation { continuation in
             var didResume = false
             let handler = FrameHandler { image in
@@ -155,7 +161,6 @@ public actor ScreenCaptureActor {
                     let tempStream = SCStream(filter: filter, configuration: config, delegate: nil)
                     try tempStream.addStreamOutput(handler, type: .screen, sampleHandlerQueue: .global(qos: .utility))
                     try await tempStream.startCapture()
-                    // Wait briefly for first frame
                     try await Task.sleep(for: .milliseconds(100))
                     try await tempStream.stopCapture()
                 } catch {
