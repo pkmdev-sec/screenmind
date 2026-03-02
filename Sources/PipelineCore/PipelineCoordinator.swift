@@ -385,6 +385,11 @@ public actor PipelineCoordinator {
             let indexText = "\(generatedNote.title) \(generatedNote.summary) \(generatedNote.details)"
             try? await semanticSearch.indexNote(noteID: savedNote.id.uuidString, text: indexText)
 
+            // Discover knowledge graph links
+            let linkDiscovery = LinkDiscoveryActor(semanticSearch: semanticSearch)
+            try? await linkDiscovery.setup()
+            _ = try? await linkDiscovery.discoverLinks(noteID: savedNote.id.uuidString, text: indexText)
+
             // Enforce screenshot storage quota periodically (every 10 notes)
             let throughputStats = await resourceMonitor.currentThroughput()
             if throughputStats.notesGenerated % 10 == 0 {

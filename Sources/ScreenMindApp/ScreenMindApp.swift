@@ -56,6 +56,14 @@ struct ScreenMindApp: App {
         .defaultSize(width: 600, height: 500)
         .defaultPosition(.center)
 
+        // Knowledge Graph window
+        Window("Knowledge Graph", id: "graph") {
+            KnowledgeGraphView()
+                .modelContainer(modelContainer)
+        }
+        .defaultSize(width: 1100, height: 700)
+        .defaultPosition(.center)
+
         // Onboarding window
         Window("Welcome to ScreenMind", id: "onboarding") {
             OnboardingView()

@@ -152,6 +152,25 @@ struct MenuBarContentView: View {
                     .onHover { hoveredButton = $0 ? "chat" : nil }
                 }
                 .buttonStyle(.plain)
+
+                Button {
+                    openWindowFront(id: "graph")
+                } label: {
+                    HStack {
+                        Label("Knowledge Graph", systemImage: "point.3.connected.trianglepath.dotted")
+                            .font(.system(size: 12, weight: .medium))
+                        Spacer()
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 6)
+                    .contentShape(Rectangle())
+                    .background(
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(.quaternary.opacity(hoveredButton == "graph" ? 0.8 : 0))
+                    )
+                    .onHover { hoveredButton = $0 ? "graph" : nil }
+                }
+                .buttonStyle(.plain)
             }
 
             Divider()
