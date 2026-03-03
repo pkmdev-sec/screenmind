@@ -245,7 +245,14 @@ public actor PipelineCoordinator {
     private func processFrame(_ frame: CapturedFrame) async {
         await resourceMonitor.recordFrameCaptured()
 
-        // Stage 0: Excluded apps filter
+        // Stage 0a: Skip our own frames (PID-based, works in bare binary mode)
+        if let pid = frame.processIdentifier,
+           pid == ProcessInfo.processInfo.processIdentifier {
+            SMLogger.pipeline.debug("Skipping self-capture: ScreenMind's own window")
+            return
+        }
+
+        // Stage 0b: Excluded apps filter
         if let bundleID = frame.bundleIdentifier,
            captureConfig.excludedBundleIDs.contains(bundleID) {
             SMLogger.pipeline.debug("Skipping excluded app: \(bundleID, privacy: .public)")

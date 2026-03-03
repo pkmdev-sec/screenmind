@@ -11,10 +11,32 @@ public final class NotificationManager: NSObject, Sendable, UNUserNotificationCe
         super.init()
     }
 
+    /// Whether notifications are available (requires app bundle with CFBundleIdentifier).
+    private var isAvailable: Bool { Bundle.main.bundleIdentifier != nil }
+
+    /// Safe accessor for UNUserNotificationCenter — returns nil in bare binary mode.
+    /// Centralizes the guard so every call site is inherently safe.
+    private var notificationCenter: UNUserNotificationCenter? {
+        guard isAvailable else { return nil }
+        return UNUserNotificationCenter.current()
+    }
+
     /// Request notification permissions.
+    /// Safe for non-bundle execution (SPM debug builds, Conductor).
     public func requestAuthorization() async -> Bool {
+        // UNUserNotificationCenter.current() throws NSInternalInconsistencyException
+        // when running as a bare binary without an app bundle. This ObjC exception
+        // bypasses Swift do/catch and calls abort(), killing the entire process.
+        guard let center = notificationCenter else {
+            if Bundle.main.bundleURL.pathExtension == "app" {
+                SMLogger.system.error("Notification center unavailable despite .app bundle — CFBundleIdentifier missing from Info.plist")
+            } else {
+                SMLogger.system.warning("Skipping notification auth — no bundle identifier (bare binary)")
+            }
+            return false
+        }
         do {
-            let granted = try await UNUserNotificationCenter.current()
+            let granted = try await center
                 .requestAuthorization(options: [.alert, .sound, .badge])
             SMLogger.system.info("Notification authorization: \(granted)")
             return granted
@@ -26,6 +48,7 @@ public final class NotificationManager: NSObject, Sendable, UNUserNotificationCe
 
     /// Post a notification when a new note is created.
     public func notifyNoteCreated(title: String, category: String) {
+        guard let center = notificationCenter else { return }
         let content = UNMutableNotificationContent()
         content.title = "New Note"
         content.subtitle = title
@@ -39,7 +62,7 @@ public final class NotificationManager: NSObject, Sendable, UNUserNotificationCe
             trigger: nil
         )
 
-        UNUserNotificationCenter.current().add(request) { error in
+        center.add(request) { error in
             if let error {
                 SMLogger.system.error("Notification failed: \(error.localizedDescription)")
             }
@@ -48,7 +71,7 @@ public final class NotificationManager: NSObject, Sendable, UNUserNotificationCe
 
     /// Post a notification for daily summary.
     public func notifyDailySummary(noteCount: Int) {
-        guard noteCount > 0 else { return }
+        guard let center = notificationCenter, noteCount > 0 else { return }
 
         let content = UNMutableNotificationContent()
         content.title = "Daily Summary"
@@ -61,7 +84,7 @@ public final class NotificationManager: NSObject, Sendable, UNUserNotificationCe
             trigger: nil
         )
 
-        UNUserNotificationCenter.current().add(request)
+        center.add(request)
     }
 
     // MARK: - UNUserNotificationCenterDelegate

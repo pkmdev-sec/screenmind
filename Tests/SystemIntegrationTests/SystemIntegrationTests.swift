@@ -241,3 +241,36 @@ import Testing
     #expect(isNewerVersion("1.0", than: "1.0.0") == false)
     #expect(isNewerVersion("1.0.1", than: "1.0") == true)
 }
+
+// MARK: - NotificationManager Bare Binary Guard Tests
+
+@Test func notificationManagerSingletonExists() {
+    let manager = NotificationManager.shared
+    _ = manager
+}
+
+@Test func notificationManagerRequestAuthDoesNotCrash() async {
+    // In SPM test context, Bundle.main.bundleIdentifier may or may not exist.
+    // The key assertion: this call must NOT crash with NSInternalInconsistencyException.
+    let result = await NotificationManager.shared.requestAuthorization()
+    // Result depends on environment — may be true (Xcode), false (bare binary), or
+    // false (denied). The important thing is we didn't crash.
+    _ = result
+}
+
+@Test func notificationManagerNotifyNoteCreatedDoesNotCrash() {
+    // Must not crash in any execution environment (bundled or bare binary)
+    NotificationManager.shared.notifyNoteCreated(title: "Test Note", category: "testing")
+}
+
+@Test func notificationManagerNotifyDailySummaryDoesNotCrash() {
+    // Must not crash — guard should handle both bare binary and zero-count cases
+    NotificationManager.shared.notifyDailySummary(noteCount: 0)
+    NotificationManager.shared.notifyDailySummary(noteCount: 5)
+}
+
+@Test func notificationManagerDailySummaryZeroCountNoOp() {
+    // noteCount == 0 should early-return without attempting notification
+    NotificationManager.shared.notifyDailySummary(noteCount: 0)
+    // No crash = pass. The guard `noteCount > 0` ensures early return.
+}
