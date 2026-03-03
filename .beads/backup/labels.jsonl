@@ -5,6 +5,9 @@
 {"issue_id":"screenmind-0u7","label":"evaluation"}
 {"issue_id":"screenmind-0u7","label":"maturity"}
 {"issue_id":"screenmind-0u7","label":"stability"}
+{"issue_id":"screenmind-0vk","label":"compaction"}
+{"issue_id":"screenmind-0vk","label":"memory"}
+{"issue_id":"screenmind-0vk","label":"testing"}
 {"issue_id":"screenmind-124","label":"loop-guard"}
 {"issue_id":"screenmind-124","label":"security"}
 {"issue_id":"screenmind-124","label":"testing"}
@@ -152,6 +155,10 @@
 {"issue_id":"screenmind-98s","label":"database"}
 {"issue_id":"screenmind-98s","label":"inspection"}
 {"issue_id":"screenmind-98s","label":"openfang"}
+{"issue_id":"screenmind-99c","label":"embeddings"}
+{"issue_id":"screenmind-99c","label":"memory"}
+{"issue_id":"screenmind-99c","label":"testing"}
+{"issue_id":"screenmind-99c","label":"vector-search"}
 {"issue_id":"screenmind-99q","label":"capabilities"}
 {"issue_id":"screenmind-99q","label":"openfang"}
 {"issue_id":"screenmind-99q","label":"security"}
@@ -161,6 +168,9 @@
 {"issue_id":"screenmind-9h7","label":"orchestrator"}
 {"issue_id":"screenmind-9h7","label":"use-case"}
 {"issue_id":"screenmind-9h7","label":"war-room"}
+{"issue_id":"screenmind-9z0","label":"analysis"}
+{"issue_id":"screenmind-9z0","label":"architecture"}
+{"issue_id":"screenmind-9z0","label":"documentation"}
 {"issue_id":"screenmind-aft","label":"investigation"}
 {"issue_id":"screenmind-aft","label":"ofp"}
 {"issue_id":"screenmind-aft","label":"p2p"}
