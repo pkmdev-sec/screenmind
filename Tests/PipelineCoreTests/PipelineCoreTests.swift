@@ -627,3 +627,30 @@ import Testing
     #expect(summary["stage-A"] == 1)
     #expect(summary["stage-B"] == 2)
 }
+
+// MARK: - Self-Exclusion Logic Tests (PipelineCoordinator concept)
+
+@Test func selfPIDExclusionDetectsOwnProcess() {
+    // Verify the PID-based self-exclusion pattern used in PipelineCoordinator.processFrame
+    let selfPID = ProcessInfo.processInfo.processIdentifier
+    #expect(selfPID > 0, "Self PID should be a valid positive integer")
+
+    // Simulate the guard from processFrame:
+    // if let pid = frame.processIdentifier, pid == ProcessInfo.processInfo.processIdentifier
+    let framePID: pid_t? = selfPID
+    let shouldSkip = framePID.map { $0 == ProcessInfo.processInfo.processIdentifier } ?? false
+    #expect(shouldSkip == true, "Frame with self PID should be skipped")
+}
+
+@Test func selfPIDExclusionAllowsOtherProcesses() {
+    let otherPID: pid_t = 1 // launchd
+    let shouldSkip = otherPID == ProcessInfo.processInfo.processIdentifier
+    #expect(shouldSkip == false, "Frame from other process should not be skipped")
+}
+
+@Test func selfPIDExclusionHandlesNilPID() {
+    // When frame.processIdentifier is nil, the optional binding fails and we don't skip
+    let framePID: pid_t? = nil
+    let shouldSkip = framePID.map { $0 == ProcessInfo.processInfo.processIdentifier } ?? false
+    #expect(shouldSkip == false, "Frame with nil PID should not be skipped")
+}

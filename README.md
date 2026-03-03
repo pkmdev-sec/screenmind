@@ -22,7 +22,7 @@
   <img src="https://img.shields.io/badge/platform-macOS%2014%2B-blue?style=flat-square&logo=apple" alt="macOS 14+" />
   <img src="https://img.shields.io/badge/swift-5.10-orange?style=flat-square&logo=swift" alt="Swift 5.10" />
   <img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="MIT License" />
-  <img src="https://img.shields.io/badge/tests-285%20passing-brightgreen?style=flat-square" alt="285 Tests Passing" />
+  <img src="https://img.shields.io/badge/tests-299%20passing-brightgreen?style=flat-square" alt="299 Tests Passing" />
   <img src="https://img.shields.io/badge/obsidian-compatible-7C3AED?style=flat-square" alt="Obsidian Compatible" />
   <img src="https://img.shields.io/badge/AI-multi--provider-FF6B6B?style=flat-square" alt="Multi-Provider AI" />
 </p>
@@ -306,7 +306,7 @@ cp .build/release/screenmind-cli /usr/local/bin/
 
 ## Architecture
 
-ScreenMind is built as a clean Swift Package Manager project with 13 independent modules and 285 unit tests:
+ScreenMind is built as a clean Swift Package Manager project with 13 independent modules and 299 unit tests:
 
 ```
 ScreenMindApp                <- Main app (SwiftUI menu bar + windows)

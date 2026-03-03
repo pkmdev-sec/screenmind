@@ -12,6 +12,13 @@ public actor AccessibilityTreeExtractor {
     /// This is 10x faster than OCR for most native and Electron apps.
     /// Returns nil if extraction fails or times out.
     public nonisolated func extractText(from pid: pid_t) -> ExtractedText? {
+        // Skip extraction if target is ScreenMind itself — querying our own
+        // SwiftUI accessibility tree from a background actor causes MainActor
+        // re-entry (EXC_BREAKPOINT via _dispatch_assert_queue_fail).
+        guard pid != ProcessInfo.processInfo.processIdentifier else {
+            return nil
+        }
+
         let start = CFAbsoluteTimeGetCurrent()
         let app = AXUIElementCreateApplication(pid)
 
@@ -23,7 +30,7 @@ public actor AccessibilityTreeExtractor {
         guard AXUIElementCopyAttributeValue(app, kAXFocusedWindowAttribute as CFString, &windowRef) == .success else {
             return nil
         }
-        // Safe cast — windowRef is an AXUIElement from the system
+        // CFTypeRef → AXUIElement cast always succeeds for AX API results
         let window = windowRef as! AXUIElement
 
         var text = ""

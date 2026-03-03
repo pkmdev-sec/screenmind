@@ -138,6 +138,11 @@ let package = Package(
 
         // MARK: - Tests
         .testTarget(
+            name: "AccessibilityExtractionTests",
+            dependencies: ["AccessibilityExtraction"],
+            path: "Tests/AccessibilityExtractionTests"
+        ),
+        .testTarget(
             name: "SharedTests",
             dependencies: ["Shared"],
             path: "Tests/SharedTests"
